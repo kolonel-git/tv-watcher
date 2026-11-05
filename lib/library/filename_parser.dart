@@ -8,6 +8,7 @@ class ParsedEpisode {
     required this.episode,
     this.endEpisode,
     this.year,
+    this.title,
   });
 
   final String showName;
@@ -17,6 +18,10 @@ class ParsedEpisode {
   /// Set for multi-episode files like S01E01E02 / S01E01-E03.
   final int? endEpisode;
   final int? year;
+
+  /// Episode title found in the filename after the marker, if any.
+  /// Not part of equality.
+  final String? title;
 
   /// Grouping key: lowercase alphanumerics, no year.
   String get showKey => showKeyFor(showName);
@@ -98,6 +103,7 @@ ParsedEpisode? parseEpisodePath(String relativePath) {
   int? episode;
   int? endEpisode;
   String? namePrefix; // filename text before the episode marker
+  String rest = ''; // filename text after the episode marker
 
   final m1 = _sxxexx.firstMatch(base);
   final m2 = m1 == null ? _nxnn.firstMatch(base) : null;
@@ -106,10 +112,12 @@ ParsedEpisode? parseEpisodePath(String relativePath) {
     episode = int.parse(m1.group(2)!);
     endEpisode = m1.group(3) != null ? int.parse(m1.group(3)!) : null;
     namePrefix = base.substring(0, m1.start);
+    rest = base.substring(m1.end);
   } else if (m2 != null) {
     season = int.parse(m2.group(1)!);
     episode = int.parse(m2.group(2)!);
     namePrefix = base.substring(0, m2.start);
+    rest = base.substring(m2.end);
   }
 
   // Season/show hints from folders (nearest first).
@@ -139,6 +147,7 @@ ParsedEpisode? parseEpisodePath(String relativePath) {
       season = folderSeason;
       episode = int.parse(me.group(1)!);
       namePrefix = base.substring(0, me.start);
+      rest = base.substring(me.end);
     } else {
       return null;
     }
@@ -166,6 +175,7 @@ ParsedEpisode? parseEpisodePath(String relativePath) {
     episode: episode,
     endEpisode: endEpisode,
     year: year,
+    title: _title(rest),
   );
 }
 
@@ -178,4 +188,25 @@ String _clean(String s) {
   out = out.replaceAll(RegExp(r'\s+'), ' ').trim();
   out = out.replaceAll(RegExp(r'[\s\-]+$'), '');
   return out;
+}
+
+final _qualityToken = RegExp(
+  r'(?<![a-z0-9])(?:480p|576p|720p|1080p|2160p|4k|web-?rip|web-?dl|blu-?ray|brrip|dvdrip|hdtv|hdrip|x264|x265|h\.?264|h\.?265|hevc|xvid|proper|repack)(?![a-z0-9])',
+  caseSensitive: false,
+);
+
+/// Episode title from the text after the SxxExx marker, e.g.
+/// " - Pilot [Bluray-1080p]-GRP" -> "Pilot".
+String? _title(String rest) {
+  var t = rest;
+  final bracket = t.indexOf('[');
+  if (bracket >= 0) t = t.substring(0, bracket);
+  // Dotted/underscored names: "Pilot.1080p.BluRay" -> spaces first.
+  if (!t.contains(' ')) t = t.replaceAll(RegExp(r'[._]+'), ' ');
+  final q = _qualityToken.firstMatch(t);
+  if (q != null) t = t.substring(0, q.start);
+  t = t.replaceFirst(RegExp(r'^[\s._-]+'), '');
+  t = t.replaceFirst(RegExp(r'[\s._-]+$'), '');
+  t = t.replaceAll(RegExp(r'\s+'), ' ');
+  return t.isEmpty ? null : t;
 }

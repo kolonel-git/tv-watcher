@@ -168,7 +168,7 @@ class ShowPage extends StatelessWidget {
                 : 'E${e.episode}';
             children.add(ListTile(
               leading: const Icon(Icons.play_arrow),
-              title: Text(range),
+              title: Text(e.title == null ? range : '$range · ${e.title}'),
               subtitle: Text(p.basename(e.filePath)),
               onTap: () => Navigator.push(
                 context,

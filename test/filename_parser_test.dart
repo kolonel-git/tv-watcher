@@ -6,6 +6,7 @@ ParsedEpisode e(String show, int s, int ep, {int? end, int? year}) =>
         showName: show, season: s, episode: ep, endEpisode: end, year: year);
 
 void main() {
+  titleTests();
   group('parses (path -> show/season/episode)', () {
     final cases = <String, ParsedEpisode>{
       // SxxExx variants
@@ -97,5 +98,26 @@ void main() {
     expect(isVideoFile('a/b.MKV'), isTrue);
     expect(isVideoFile('a/b.srt'), isFalse);
     expect(isVideoFile('a/b.nfo'), isFalse);
+  });
+}
+
+void titleTests() {
+  group('episode title from filename', () {
+    final cases = <String, String?>{
+      'Rick and Morty (2013) - S01E01 - Pilot [Bluray-1080p][Opus 5.1][x265]-FraMeSToR.mkv':
+          'Pilot',
+      'Rick and Morty (2013) - S01E06 - Rick Potion #9 [Bluray-1080p][Opus 5.1][x265]-GRP.mkv':
+          'Rick Potion #9',
+      'Show - S01E04 - M. Night Shaym-Aliens! [Bluray-1080p]-GRP.mkv':
+          'M. Night Shaym-Aliens!',
+      'Show.S01E02.Lawnmower.Dog.1080p.BluRay.x264-GRP.mkv': 'Lawnmower Dog',
+      'Show S01E01.mkv': null,
+      'Show S01E01 720p.mkv': null,
+      'Show - S01E03 - Anatomy Park.mkv': 'Anatomy Park',
+      'Show/Season 1/Episode 3 - The Title.mkv': 'The Title',
+    };
+    cases.forEach((path, title) {
+      test(path, () => expect(parseEpisodePath(path)?.title, title));
+    });
   });
 }

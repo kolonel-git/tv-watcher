@@ -25,6 +25,7 @@ class Episodes extends Table {
   IntColumn get season => integer().nullable()();
   IntColumn get episode => integer().nullable()();
   IntColumn get endEpisode => integer().nullable()();
+  TextColumn get title => text().nullable()();
 
   /// File no longer found on disk at last scan. Row kept to preserve data.
   BoolColumn get missing => boolean().withDefault(const Constant(false))();
@@ -42,7 +43,15 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.addColumn(episodes, episodes.title);
+        },
+      );
 
   // ---- folders ----
   Stream<List<LibraryFolder>> watchFolders() =>
@@ -110,6 +119,7 @@ class AppDatabase extends _$AppDatabase {
         season: Value(season),
         episode: Value(episode),
         endEpisode: const Value(null),
+        title: const Value(null),
         manual: const Value(true),
       ),
     );

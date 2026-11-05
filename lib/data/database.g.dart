@@ -575,6 +575,15 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _missingMeta = const VerificationMeta(
     'missing',
   );
@@ -624,6 +633,7 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     season,
     episode,
     endEpisode,
+    title,
     missing,
     manual,
     addedAt,
@@ -683,6 +693,12 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         endEpisode.isAcceptableOrUnknown(data['end_episode']!, _endEpisodeMeta),
       );
     }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
     if (data.containsKey('missing')) {
       context.handle(
         _missingMeta,
@@ -738,6 +754,10 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         DriftSqlType.int,
         data['${effectivePrefix}end_episode'],
       ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      ),
       missing: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}missing'],
@@ -767,6 +787,7 @@ class Episode extends DataClass implements Insertable<Episode> {
   final int? season;
   final int? episode;
   final int? endEpisode;
+  final String? title;
 
   /// File no longer found on disk at last scan. Row kept to preserve data.
   final bool missing;
@@ -782,6 +803,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     this.season,
     this.episode,
     this.endEpisode,
+    this.title,
     required this.missing,
     required this.manual,
     required this.addedAt,
@@ -803,6 +825,9 @@ class Episode extends DataClass implements Insertable<Episode> {
     }
     if (!nullToAbsent || endEpisode != null) {
       map['end_episode'] = Variable<int>(endEpisode);
+    }
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
     }
     map['missing'] = Variable<bool>(missing);
     map['manual'] = Variable<bool>(manual);
@@ -827,6 +852,9 @@ class Episode extends DataClass implements Insertable<Episode> {
       endEpisode: endEpisode == null && nullToAbsent
           ? const Value.absent()
           : Value(endEpisode),
+      title: title == null && nullToAbsent
+          ? const Value.absent()
+          : Value(title),
       missing: Value(missing),
       manual: Value(manual),
       addedAt: Value(addedAt),
@@ -846,6 +874,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       season: serializer.fromJson<int?>(json['season']),
       episode: serializer.fromJson<int?>(json['episode']),
       endEpisode: serializer.fromJson<int?>(json['endEpisode']),
+      title: serializer.fromJson<String?>(json['title']),
       missing: serializer.fromJson<bool>(json['missing']),
       manual: serializer.fromJson<bool>(json['manual']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
@@ -862,6 +891,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       'season': serializer.toJson<int?>(season),
       'episode': serializer.toJson<int?>(episode),
       'endEpisode': serializer.toJson<int?>(endEpisode),
+      'title': serializer.toJson<String?>(title),
       'missing': serializer.toJson<bool>(missing),
       'manual': serializer.toJson<bool>(manual),
       'addedAt': serializer.toJson<DateTime>(addedAt),
@@ -876,6 +906,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     Value<int?> season = const Value.absent(),
     Value<int?> episode = const Value.absent(),
     Value<int?> endEpisode = const Value.absent(),
+    Value<String?> title = const Value.absent(),
     bool? missing,
     bool? manual,
     DateTime? addedAt,
@@ -887,6 +918,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     season: season.present ? season.value : this.season,
     episode: episode.present ? episode.value : this.episode,
     endEpisode: endEpisode.present ? endEpisode.value : this.endEpisode,
+    title: title.present ? title.value : this.title,
     missing: missing ?? this.missing,
     manual: manual ?? this.manual,
     addedAt: addedAt ?? this.addedAt,
@@ -902,6 +934,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       endEpisode: data.endEpisode.present
           ? data.endEpisode.value
           : this.endEpisode,
+      title: data.title.present ? data.title.value : this.title,
       missing: data.missing.present ? data.missing.value : this.missing,
       manual: data.manual.present ? data.manual.value : this.manual,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
@@ -918,6 +951,7 @@ class Episode extends DataClass implements Insertable<Episode> {
           ..write('season: $season, ')
           ..write('episode: $episode, ')
           ..write('endEpisode: $endEpisode, ')
+          ..write('title: $title, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
           ..write('addedAt: $addedAt')
@@ -934,6 +968,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     season,
     episode,
     endEpisode,
+    title,
     missing,
     manual,
     addedAt,
@@ -949,6 +984,7 @@ class Episode extends DataClass implements Insertable<Episode> {
           other.season == this.season &&
           other.episode == this.episode &&
           other.endEpisode == this.endEpisode &&
+          other.title == this.title &&
           other.missing == this.missing &&
           other.manual == this.manual &&
           other.addedAt == this.addedAt);
@@ -962,6 +998,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
   final Value<int?> season;
   final Value<int?> episode;
   final Value<int?> endEpisode;
+  final Value<String?> title;
   final Value<bool> missing;
   final Value<bool> manual;
   final Value<DateTime> addedAt;
@@ -973,6 +1010,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.season = const Value.absent(),
     this.episode = const Value.absent(),
     this.endEpisode = const Value.absent(),
+    this.title = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
@@ -985,6 +1023,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.season = const Value.absent(),
     this.episode = const Value.absent(),
     this.endEpisode = const Value.absent(),
+    this.title = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
@@ -998,6 +1037,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Expression<int>? season,
     Expression<int>? episode,
     Expression<int>? endEpisode,
+    Expression<String>? title,
     Expression<bool>? missing,
     Expression<bool>? manual,
     Expression<DateTime>? addedAt,
@@ -1010,6 +1050,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       if (season != null) 'season': season,
       if (episode != null) 'episode': episode,
       if (endEpisode != null) 'end_episode': endEpisode,
+      if (title != null) 'title': title,
       if (missing != null) 'missing': missing,
       if (manual != null) 'manual': manual,
       if (addedAt != null) 'added_at': addedAt,
@@ -1024,6 +1065,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Value<int?>? season,
     Value<int?>? episode,
     Value<int?>? endEpisode,
+    Value<String?>? title,
     Value<bool>? missing,
     Value<bool>? manual,
     Value<DateTime>? addedAt,
@@ -1036,6 +1078,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       season: season ?? this.season,
       episode: episode ?? this.episode,
       endEpisode: endEpisode ?? this.endEpisode,
+      title: title ?? this.title,
       missing: missing ?? this.missing,
       manual: manual ?? this.manual,
       addedAt: addedAt ?? this.addedAt,
@@ -1066,6 +1109,9 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     if (endEpisode.present) {
       map['end_episode'] = Variable<int>(endEpisode.value);
     }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
     if (missing.present) {
       map['missing'] = Variable<bool>(missing.value);
     }
@@ -1088,6 +1134,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
           ..write('season: $season, ')
           ..write('episode: $episode, ')
           ..write('endEpisode: $endEpisode, ')
+          ..write('title: $title, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
           ..write('addedAt: $addedAt')
@@ -1612,6 +1659,7 @@ typedef $$EpisodesTableCreateCompanionBuilder = EpisodesCompanion Function({
   Value<int?> season,
   Value<int?> episode,
   Value<int?> endEpisode,
+  Value<String?> title,
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
@@ -1624,6 +1672,7 @@ typedef $$EpisodesTableUpdateCompanionBuilder = EpisodesCompanion Function({
   Value<int?> season,
   Value<int?> episode,
   Value<int?> endEpisode,
+  Value<String?> title,
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
@@ -1699,6 +1748,11 @@ class $$EpisodesTableFilterComposer
 
   ColumnFilters<int> get endEpisode => $composableBuilder(
     column: $table.endEpisode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1798,6 +1852,11 @@ class $$EpisodesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get missing => $composableBuilder(
     column: $table.missing,
     builder: (column) => ColumnOrderings(column),
@@ -1885,6 +1944,9 @@ class $$EpisodesTableAnnotationComposer
     column: $table.endEpisode,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 
   GeneratedColumn<bool> get missing =>
       $composableBuilder(column: $table.missing, builder: (column) => column);
@@ -1977,6 +2039,7 @@ class $$EpisodesTableTableManager
                 Value<int?> season = const Value.absent(),
                 Value<int?> episode = const Value.absent(),
                 Value<int?> endEpisode = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
@@ -1988,6 +2051,7 @@ class $$EpisodesTableTableManager
                 season: season,
                 episode: episode,
                 endEpisode: endEpisode,
+                title: title,
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,
@@ -2001,6 +2065,7 @@ class $$EpisodesTableTableManager
                 Value<int?> season = const Value.absent(),
                 Value<int?> episode = const Value.absent(),
                 Value<int?> endEpisode = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
@@ -2012,6 +2077,7 @@ class $$EpisodesTableTableManager
                 season: season,
                 episode: episode,
                 endEpisode: endEpisode,
+                title: title,
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,

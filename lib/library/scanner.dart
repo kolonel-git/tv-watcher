@@ -111,6 +111,7 @@ Future<bool> _applyParse(
         season: const Value(null),
         episode: const Value(null),
         endEpisode: const Value(null),
+        title: const Value(null),
         missing: markPresent ? const Value(false) : const Value.absent(),
       ),
     );
@@ -123,6 +124,7 @@ Future<bool> _applyParse(
       season: Value(parsed.season),
       episode: Value(parsed.episode),
       endEpisode: Value(parsed.endEpisode),
+      title: Value(parsed.title),
       missing: markPresent ? const Value(false) : const Value.absent(),
     ),
   );
