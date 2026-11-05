@@ -1,0 +1,9 @@
+.env
+*.db
+*.sqlite
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+*.iml
