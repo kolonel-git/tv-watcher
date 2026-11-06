@@ -6,15 +6,30 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
+import '../data/database.dart';
 import 'cone_volume.dart';
 
-/// Sprint 1 player: open a file, standard controls, keyboard shortcuts.
+/// Player: controls, keyboard shortcuts, resume and progress saving.
 class PlayerPage extends StatefulWidget {
-  const PlayerPage({super.key, this.initialPath, this.title});
+  const PlayerPage({
+    super.key,
+    this.initialPath,
+    this.title,
+    this.db,
+    this.episodeId,
+    this.startAt,
+  });
 
   /// File to start playing immediately (from the library).
   final String? initialPath;
   final String? title;
+
+  /// When both are set, progress is saved for this episode.
+  final AppDatabase? db;
+  final int? episodeId;
+
+  /// Resume point. Null or zero = start from the beginning.
+  final Duration? startAt;
 
   @override
   State<PlayerPage> createState() => _PlayerPageState();
@@ -30,6 +45,14 @@ class _PlayerPageState extends State<PlayerPage> {
   bool _hasMedia = false;
   double _preMuteVolume = 100;
   Timer? _hideTimer;
+  Timer? _saveTimer;
+  Timer? _startGuardTimer;
+
+  /// Don't overwrite the saved resume point with the pre-seek position (0)
+  /// before playback has actually reached the start offset.
+  bool _reachedStart = true;
+
+  bool get _tracking => widget.db != null && widget.episodeId != null;
 
   @override
   void initState() {
@@ -37,13 +60,51 @@ class _PlayerPageState extends State<PlayerPage> {
     _player.stream.volume.listen((_) => setState(() {}));
     final path = widget.initialPath;
     if (path != null) {
-      _player.open(Media(path));
+      final start = widget.startAt;
+      final resume = start != null && start > Duration.zero;
+      _reachedStart = !resume;
+      _player.open(Media(path, start: resume ? start : null));
       _hasMedia = true;
+      if (resume) {
+        _player.stream.position.listen((p) {
+          if (!_reachedStart && p >= start - const Duration(seconds: 3)) {
+            _reachedStart = true;
+          }
+        });
+        // Fallback if the seek never reports (e.g. unusual container).
+        _startGuardTimer = Timer(const Duration(seconds: 10), () {
+          _reachedStart = true;
+        });
+      }
     }
+    if (_tracking) {
+      _saveTimer =
+          Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
+      _player.stream.playing.listen((playing) {
+        if (!playing) _saveProgress();
+      });
+      _player.stream.completed.listen((done) {
+        if (done) _saveProgress(atEnd: true);
+      });
+    }
+  }
+
+  /// Captures position/duration synchronously, then writes in the background.
+  void _saveProgress({bool atEnd = false}) {
+    if (!_tracking || !_reachedStart) return;
+    final duration = _player.state.duration.inMilliseconds;
+    final position =
+        atEnd ? duration : _player.state.position.inMilliseconds;
+    if (duration <= 0) return;
+    widget.db!.saveProgress(widget.episodeId!,
+        positionMs: position, durationMs: duration);
   }
 
   @override
   void dispose() {
+    _saveProgress();
+    _saveTimer?.cancel();
+    _startGuardTimer?.cancel();
     _hideTimer?.cancel();
     _focus.dispose();
     if (_fullscreen) defaultExitNativeFullscreen();

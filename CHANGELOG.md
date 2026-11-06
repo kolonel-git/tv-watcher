@@ -1,6 +1,7 @@
 ﻿# Changelog
 
 ## Unreleased
+- Sprint 5: resume and watched tracking. Position saved every 5s, on pause, on completion and on exit; episodes resume at the exact saved timestamp; 90% = watched (resume point cleared); under 5s is ignored. Episode cards show progress bar and watched check, per-episode menu (mark watched/unwatched, play from start), season and whole-show mark watched/unwatched. Home 'Continue watching' row and show-page Resume/Play button use one rule: in-progress episode, else next unwatched after the last watched (rolls into next season, skips specials). DB schema v4. 146 tests.
 - Unsorted grouping: similar files grouped by name prefix (with or without a dash, 'Episode N', brackets ignored), leftovers grouped by folder and numbered by file order; expand a group to see files; tick several groups and assign them to one show+season; show name suggested from folder or library name. 106 tests.
 - Player polish: shorter control bar, rounded icons, red/yellow cone volume, Poppins font (bundled, OFL) app-wide.
 - Sprint 4 feedback: episode card / season dropdown spacing; player gets -10s/+10s buttons around play/pause and a VLC-style cone volume control (gradient fill, drag/click/mouse wheel); Unsorted groups anime-style numbered files (`Show - Arc - 07`) so a whole season is assigned at once (absolute numbering, replaces Sprint 2b). 93 tests.

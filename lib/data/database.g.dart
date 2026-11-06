@@ -1044,6 +1044,56 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _watchedMeta = const VerificationMeta(
+    'watched',
+  );
+  @override
+  late final GeneratedColumn<bool> watched = GeneratedColumn<bool>(
+    'watched',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("watched" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastPlayedAtMeta = const VerificationMeta(
+    'lastPlayedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPlayedAt = GeneratedColumn<DateTime>(
+    'last_played_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1062,6 +1112,10 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     missing,
     manual,
     addedAt,
+    positionMs,
+    durationMs,
+    watched,
+    lastPlayedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1172,6 +1226,33 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
       );
     }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('watched')) {
+      context.handle(
+        _watchedMeta,
+        watched.isAcceptableOrUnknown(data['watched']!, _watchedMeta),
+      );
+    }
+    if (data.containsKey('last_played_at')) {
+      context.handle(
+        _lastPlayedAtMeta,
+        lastPlayedAt.isAcceptableOrUnknown(
+          data['last_played_at']!,
+          _lastPlayedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1245,6 +1326,22 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
       )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      )!,
+      watched: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}watched'],
+      )!,
+      lastPlayedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_played_at'],
+      ),
     );
   }
 
@@ -1275,6 +1372,12 @@ class Episode extends DataClass implements Insertable<Episode> {
   /// User assigned show/season/episode by hand; rescans never overwrite it.
   final bool manual;
   final DateTime addedAt;
+
+  /// Resume point in ms. 0 = none / start over.
+  final int positionMs;
+  final int durationMs;
+  final bool watched;
+  final DateTime? lastPlayedAt;
   const Episode({
     required this.id,
     required this.filePath,
@@ -1292,6 +1395,10 @@ class Episode extends DataClass implements Insertable<Episode> {
     required this.missing,
     required this.manual,
     required this.addedAt,
+    required this.positionMs,
+    required this.durationMs,
+    required this.watched,
+    this.lastPlayedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1332,6 +1439,12 @@ class Episode extends DataClass implements Insertable<Episode> {
     map['missing'] = Variable<bool>(missing);
     map['manual'] = Variable<bool>(manual);
     map['added_at'] = Variable<DateTime>(addedAt);
+    map['position_ms'] = Variable<int>(positionMs);
+    map['duration_ms'] = Variable<int>(durationMs);
+    map['watched'] = Variable<bool>(watched);
+    if (!nullToAbsent || lastPlayedAt != null) {
+      map['last_played_at'] = Variable<DateTime>(lastPlayedAt);
+    }
     return map;
   }
 
@@ -1373,6 +1486,12 @@ class Episode extends DataClass implements Insertable<Episode> {
       missing: Value(missing),
       manual: Value(manual),
       addedAt: Value(addedAt),
+      positionMs: Value(positionMs),
+      durationMs: Value(durationMs),
+      watched: Value(watched),
+      lastPlayedAt: lastPlayedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPlayedAt),
     );
   }
 
@@ -1398,6 +1517,10 @@ class Episode extends DataClass implements Insertable<Episode> {
       missing: serializer.fromJson<bool>(json['missing']),
       manual: serializer.fromJson<bool>(json['manual']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      durationMs: serializer.fromJson<int>(json['durationMs']),
+      watched: serializer.fromJson<bool>(json['watched']),
+      lastPlayedAt: serializer.fromJson<DateTime?>(json['lastPlayedAt']),
     );
   }
   @override
@@ -1420,6 +1543,10 @@ class Episode extends DataClass implements Insertable<Episode> {
       'missing': serializer.toJson<bool>(missing),
       'manual': serializer.toJson<bool>(manual),
       'addedAt': serializer.toJson<DateTime>(addedAt),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'durationMs': serializer.toJson<int>(durationMs),
+      'watched': serializer.toJson<bool>(watched),
+      'lastPlayedAt': serializer.toJson<DateTime?>(lastPlayedAt),
     };
   }
 
@@ -1440,6 +1567,10 @@ class Episode extends DataClass implements Insertable<Episode> {
     bool? missing,
     bool? manual,
     DateTime? addedAt,
+    int? positionMs,
+    int? durationMs,
+    bool? watched,
+    Value<DateTime?> lastPlayedAt = const Value.absent(),
   }) => Episode(
     id: id ?? this.id,
     filePath: filePath ?? this.filePath,
@@ -1457,6 +1588,10 @@ class Episode extends DataClass implements Insertable<Episode> {
     missing: missing ?? this.missing,
     manual: manual ?? this.manual,
     addedAt: addedAt ?? this.addedAt,
+    positionMs: positionMs ?? this.positionMs,
+    durationMs: durationMs ?? this.durationMs,
+    watched: watched ?? this.watched,
+    lastPlayedAt: lastPlayedAt.present ? lastPlayedAt.value : this.lastPlayedAt,
   );
   Episode copyWithCompanion(EpisodesCompanion data) {
     return Episode(
@@ -1478,6 +1613,16 @@ class Episode extends DataClass implements Insertable<Episode> {
       missing: data.missing.present ? data.missing.value : this.missing,
       manual: data.manual.present ? data.manual.value : this.manual,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      watched: data.watched.present ? data.watched.value : this.watched,
+      lastPlayedAt: data.lastPlayedAt.present
+          ? data.lastPlayedAt.value
+          : this.lastPlayedAt,
     );
   }
 
@@ -1499,7 +1644,11 @@ class Episode extends DataClass implements Insertable<Episode> {
           ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
-          ..write('addedAt: $addedAt')
+          ..write('addedAt: $addedAt, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('watched: $watched, ')
+          ..write('lastPlayedAt: $lastPlayedAt')
           ..write(')'))
         .toString();
   }
@@ -1522,6 +1671,10 @@ class Episode extends DataClass implements Insertable<Episode> {
     missing,
     manual,
     addedAt,
+    positionMs,
+    durationMs,
+    watched,
+    lastPlayedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1542,7 +1695,11 @@ class Episode extends DataClass implements Insertable<Episode> {
           other.stillFile == this.stillFile &&
           other.missing == this.missing &&
           other.manual == this.manual &&
-          other.addedAt == this.addedAt);
+          other.addedAt == this.addedAt &&
+          other.positionMs == this.positionMs &&
+          other.durationMs == this.durationMs &&
+          other.watched == this.watched &&
+          other.lastPlayedAt == this.lastPlayedAt);
 }
 
 class EpisodesCompanion extends UpdateCompanion<Episode> {
@@ -1562,6 +1719,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
   final Value<bool> missing;
   final Value<bool> manual;
   final Value<DateTime> addedAt;
+  final Value<int> positionMs;
+  final Value<int> durationMs;
+  final Value<bool> watched;
+  final Value<DateTime?> lastPlayedAt;
   const EpisodesCompanion({
     this.id = const Value.absent(),
     this.filePath = const Value.absent(),
@@ -1579,6 +1740,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.watched = const Value.absent(),
+    this.lastPlayedAt = const Value.absent(),
   });
   EpisodesCompanion.insert({
     this.id = const Value.absent(),
@@ -1597,6 +1762,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.watched = const Value.absent(),
+    this.lastPlayedAt = const Value.absent(),
   }) : filePath = Value(filePath),
        folderId = Value(folderId);
   static Insertable<Episode> custom({
@@ -1616,6 +1785,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Expression<bool>? missing,
     Expression<bool>? manual,
     Expression<DateTime>? addedAt,
+    Expression<int>? positionMs,
+    Expression<int>? durationMs,
+    Expression<bool>? watched,
+    Expression<DateTime>? lastPlayedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1634,6 +1807,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       if (missing != null) 'missing': missing,
       if (manual != null) 'manual': manual,
       if (addedAt != null) 'added_at': addedAt,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (watched != null) 'watched': watched,
+      if (lastPlayedAt != null) 'last_played_at': lastPlayedAt,
     });
   }
 
@@ -1654,6 +1831,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Value<bool>? missing,
     Value<bool>? manual,
     Value<DateTime>? addedAt,
+    Value<int>? positionMs,
+    Value<int>? durationMs,
+    Value<bool>? watched,
+    Value<DateTime?>? lastPlayedAt,
   }) {
     return EpisodesCompanion(
       id: id ?? this.id,
@@ -1672,6 +1853,10 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       missing: missing ?? this.missing,
       manual: manual ?? this.manual,
       addedAt: addedAt ?? this.addedAt,
+      positionMs: positionMs ?? this.positionMs,
+      durationMs: durationMs ?? this.durationMs,
+      watched: watched ?? this.watched,
+      lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
     );
   }
 
@@ -1726,6 +1911,18 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (watched.present) {
+      map['watched'] = Variable<bool>(watched.value);
+    }
+    if (lastPlayedAt.present) {
+      map['last_played_at'] = Variable<DateTime>(lastPlayedAt.value);
+    }
     return map;
   }
 
@@ -1747,7 +1944,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
           ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
-          ..write('addedAt: $addedAt')
+          ..write('addedAt: $addedAt, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('watched: $watched, ')
+          ..write('lastPlayedAt: $lastPlayedAt')
           ..write(')'))
         .toString();
   }
@@ -2431,6 +2632,10 @@ typedef $$EpisodesTableCreateCompanionBuilder = EpisodesCompanion Function({
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
+  Value<int> positionMs,
+  Value<int> durationMs,
+  Value<bool> watched,
+  Value<DateTime?> lastPlayedAt,
 });
 typedef $$EpisodesTableUpdateCompanionBuilder = EpisodesCompanion Function({
   Value<int> id,
@@ -2449,6 +2654,10 @@ typedef $$EpisodesTableUpdateCompanionBuilder = EpisodesCompanion Function({
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
+  Value<int> positionMs,
+  Value<int> durationMs,
+  Value<bool> watched,
+  Value<DateTime?> lastPlayedAt,
 });
 
 final class $$EpisodesTableReferences
@@ -2566,6 +2775,26 @@ class $$EpisodesTableFilterComposer
 
   ColumnFilters<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get watched => $composableBuilder(
+    column: $table.watched,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2695,6 +2924,26 @@ class $$EpisodesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get watched => $composableBuilder(
+    column: $table.watched,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LibraryFoldersTableOrderingComposer get folderId {
     final $$LibraryFoldersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2795,6 +3044,24 @@ class $$EpisodesTableAnnotationComposer
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get watched =>
+      $composableBuilder(column: $table.watched, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
+    builder: (column) => column,
+  );
+
   $$LibraryFoldersTableAnnotationComposer get folderId {
     final $$LibraryFoldersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -2886,6 +3153,10 @@ class $$EpisodesTableTableManager
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<bool> watched = const Value.absent(),
+                Value<DateTime?> lastPlayedAt = const Value.absent(),
               }) => EpisodesCompanion(
                 id: id,
                 filePath: filePath,
@@ -2903,6 +3174,10 @@ class $$EpisodesTableTableManager
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                watched: watched,
+                lastPlayedAt: lastPlayedAt,
               ),
           createCompanionCallback:
               ({
@@ -2922,6 +3197,10 @@ class $$EpisodesTableTableManager
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<bool> watched = const Value.absent(),
+                Value<DateTime?> lastPlayedAt = const Value.absent(),
               }) => EpisodesCompanion.insert(
                 id: id,
                 filePath: filePath,
@@ -2939,6 +3218,10 @@ class $$EpisodesTableTableManager
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,
+                positionMs: positionMs,
+                durationMs: durationMs,
+                watched: watched,
+                lastPlayedAt: lastPlayedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

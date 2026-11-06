@@ -3,8 +3,9 @@ import 'package:path/path.dart' as p;
 
 import '../data/database.dart';
 import '../metadata/metadata_service.dart';
-import '../player/player_page.dart';
+import '../watch/watch_logic.dart';
 import 'artwork.dart';
+import 'play.dart';
 import 'rematch_dialog.dart';
 
 /// First real season if present, else specials (0).
@@ -28,21 +29,18 @@ class _ShowPageState extends State<ShowPage> {
 
   AppDatabase get db => widget.db;
 
-  void _play(Show show, Episode e) {
-    final name = e.tmdbTitle ?? e.title;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PlayerPage(
-          initialPath: e.filePath,
-          title:
-              '${show.tmdbName ?? show.name}  S${e.season}E${e.episode}${name != null ? ' · $name' : ''}',
-        ),
-      ),
-    );
-  }
+  void _play(Show show, Episode e, {bool fromStart = false}) =>
+      openEpisode(context, db, show, e, fromStart: fromStart);
 
   Future<void> _menu(String v, Show show) async {
+    if (v == 'show_watched') {
+      await db.setShowWatched(show.id, true);
+      return;
+    }
+    if (v == 'show_unwatched') {
+      await db.setShowWatched(show.id, false);
+      return;
+    }
     final meta = widget.meta!;
     if (v == 'rematch') {
       await showDialog(
@@ -73,15 +71,23 @@ class _ShowPageState extends State<ShowPage> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             actions: [
-              if (widget.meta != null)
-                PopupMenuButton<String>(
-                  onSelected: (v) => _menu(v, show),
-                  itemBuilder: (_) => const [
+              PopupMenuButton<String>(
+                onSelected: (v) => _menu(v, show),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                      value: 'show_watched',
+                      child: Text('Mark whole show watched')),
+                  const PopupMenuItem(
+                      value: 'show_unwatched',
+                      child: Text('Mark whole show unwatched')),
+                  if (widget.meta != null) ...const [
+                    PopupMenuDivider(),
                     PopupMenuItem(value: 'rematch', child: Text('Re-match...')),
                     PopupMenuItem(
                         value: 'refresh', child: Text('Refresh metadata')),
                   ],
-                ),
+                ],
+              ),
             ],
           ),
           body: StreamBuilder<List<Episode>>(
@@ -99,6 +105,19 @@ class _ShowPageState extends State<ShowPage> {
                 for (final e in eps)
                   if ((e.season ?? 0) == season) e
               ];
+              final target = continueTarget(eps.map(episodeRef));
+              final targetEp = target == null
+                  ? null
+                  : eps.firstWhere((e) => e.id == target.episode.id);
+              final firstShown = shown.isEmpty ? null : shown.first;
+              final playEp = targetEp ?? firstShown;
+              final playLabel = targetEp != null
+                  ? (target!.resumeMs > 0
+                      ? 'Resume S${targetEp.season}E${targetEp.episode}'
+                      : 'Play S${targetEp.season}E${targetEp.episode}')
+                  : (firstShown == null
+                      ? 'Play'
+                      : 'Play S${firstShown.season}E${firstShown.episode}');
               return ListView(
                 padding: EdgeInsets.zero,
                 children: [
@@ -106,10 +125,8 @@ class _ShowPageState extends State<ShowPage> {
                     show: show,
                     episodeCount: eps.length,
                     seasonCount: seasons.where((s) => s > 0).length,
-                    onPlay: shown.isEmpty ? null : () => _play(show, shown.first),
-                    playLabel: shown.isEmpty
-                        ? 'Play'
-                        : 'Play S${shown.first.season}E${shown.first.episode}',
+                    onPlay: playEp == null ? null : () => _play(show, playEp),
+                    playLabel: playLabel,
                   ),
                   if (seasons.isNotEmpty)
                     Padding(
@@ -118,6 +135,22 @@ class _ShowPageState extends State<ShowPage> {
                         Text('Episodes',
                             style: Theme.of(context).textTheme.titleLarge),
                         const Spacer(),
+                        if (season != null)
+                          PopupMenuButton<String>(
+                            tooltip: 'Season actions',
+                            icon: const Icon(Icons.more_horiz_rounded),
+                            onSelected: (v) =>
+                                db.setSeasonWatched(show.id, season, v == 'w'),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                  value: 'w',
+                                  child: Text('Mark season watched')),
+                              PopupMenuItem(
+                                  value: 'u',
+                                  child: Text('Mark season unwatched')),
+                            ],
+                          ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 2),
@@ -143,7 +176,12 @@ class _ShowPageState extends State<ShowPage> {
                       ]),
                     ),
                   for (final e in shown)
-                    _EpisodeCard(episode: e, onTap: () => _play(show, e)),
+                    _EpisodeCard(
+                      episode: e,
+                      onTap: () => _play(show, e),
+                      onPlayFromStart: () => _play(show, e, fromStart: true),
+                      onToggleWatched: () => db.setWatched([e.id], !e.watched),
+                    ),
                   const SizedBox(height: 32),
                 ],
               );
@@ -245,9 +283,16 @@ class _Hero extends StatelessWidget {
 }
 
 class _EpisodeCard extends StatefulWidget {
-  const _EpisodeCard({required this.episode, required this.onTap});
+  const _EpisodeCard({
+    required this.episode,
+    required this.onTap,
+    required this.onPlayFromStart,
+    required this.onToggleWatched,
+  });
   final Episode episode;
   final VoidCallback onTap;
+  final VoidCallback onPlayFromStart;
+  final VoidCallback onToggleWatched;
 
   @override
   State<_EpisodeCard> createState() => _EpisodeCardState();
@@ -261,6 +306,9 @@ class _EpisodeCardState extends State<_EpisodeCard> {
     final e = widget.episode;
     final theme = Theme.of(context);
     final name = e.tmdbTitle ?? e.title;
+    final progress = (e.positionMs > 0 && e.durationMs > 0)
+        ? (e.positionMs / e.durationMs).clamp(0.0, 1.0)
+        : 0.0;
     final number = e.endEpisode != null
         ? '${e.episode}-${e.endEpisode}'
         : '${e.episode}';
@@ -292,10 +340,32 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                 width: 224,
                 height: 126,
                 child: Stack(fit: StackFit.expand, children: [
-                  ArtworkImage(
-                      path: e.stillFile,
-                      cacheWidth: 448,
-                      placeholderIcon: Icons.movie_outlined),
+                  Opacity(
+                    opacity: e.watched ? 0.55 : 1,
+                    child: ArtworkImage(
+                        path: e.stillFile,
+                        cacheWidth: 448,
+                        placeholderIcon: Icons.movie_outlined),
+                  ),
+                  if (e.watched)
+                    const Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Icon(Icons.check_circle_rounded,
+                          size: 22, color: Colors.white),
+                    ),
+                  if (progress > 0)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 4,
+                        backgroundColor: Colors.black54,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
                   AnimatedOpacity(
                     opacity: _hover ? 1 : 0,
                     duration: const Duration(milliseconds: 120),
@@ -323,6 +393,24 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                       Text('  ${e.runtime} min',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(color: Colors.white54)),
+                    PopupMenuButton<String>(
+                      tooltip: 'Episode actions',
+                      icon: const Icon(Icons.more_vert_rounded, size: 20),
+                      onSelected: (v) {
+                        if (v == 'toggle') widget.onToggleWatched();
+                        if (v == 'start') widget.onPlayFromStart();
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                            value: 'toggle',
+                            child: Text(e.watched
+                                ? 'Mark unwatched'
+                                : 'Mark watched')),
+                        if (e.positionMs > 0)
+                          const PopupMenuItem(
+                              value: 'start', child: Text('Play from start')),
+                      ],
+                    ),
                   ]),
                   const SizedBox(height: 6),
                   Text(

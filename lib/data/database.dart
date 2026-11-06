@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../watch/watch_logic.dart';
+
 part 'database.g.dart';
 
 class LibraryFolders extends Table {
@@ -55,6 +57,13 @@ class Episodes extends Table {
   /// User assigned show/season/episode by hand; rescans never overwrite it.
   BoolColumn get manual => boolean().withDefault(const Constant(false))();
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
+
+  // --- Watch state (Sprint 5) ---
+  /// Resume point in ms. 0 = none / start over.
+  IntColumn get positionMs => integer().withDefault(const Constant(0))();
+  IntColumn get durationMs => integer().withDefault(const Constant(0))();
+  BoolColumn get watched => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get lastPlayedAt => dateTime().nullable()();
 }
 
 @DriftDatabase(tables: [LibraryFolders, Shows, Episodes])
@@ -65,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,6 +94,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(episodes, episodes.runtime);
             await m.addColumn(episodes, episodes.airDate);
             await m.addColumn(episodes, episodes.stillFile);
+          }
+          if (from < 4) {
+            await m.addColumn(episodes, episodes.positionMs);
+            await m.addColumn(episodes, episodes.durationMs);
+            await m.addColumn(episodes, episodes.watched);
+            await m.addColumn(episodes, episodes.lastPlayedAt);
           }
         },
       );
@@ -161,6 +176,88 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+
+  // ---- watch state ----
+
+  /// Stores progress for [episodeId] using [computeProgress] rules.
+  Future<void> saveProgress(
+    int episodeId, {
+    required int positionMs,
+    required int durationMs,
+  }) async {
+    final ep = await (select(episodes)..where((e) => e.id.equals(episodeId)))
+        .getSingleOrNull();
+    if (ep == null) return;
+    final u = computeProgress(
+        positionMs: positionMs, durationMs: durationMs, wasWatched: ep.watched);
+    final becameWatched = u.watched && !ep.watched;
+    final meaningful = u.positionMs > 0 || becameWatched;
+    await (update(episodes)..where((e) => e.id.equals(episodeId))).write(
+      EpisodesCompanion(
+        positionMs: Value(u.positionMs),
+        durationMs: durationMs > 0 ? Value(durationMs) : const Value.absent(),
+        watched: Value(u.watched),
+        lastPlayedAt:
+            meaningful ? Value(DateTime.now()) : const Value.absent(),
+      ),
+    );
+  }
+
+  /// Manual or bulk mark. Watched also clears the resume point; unwatched
+  /// clears resume point and play history.
+  Future<void> setWatched(Iterable<int> episodeIds, bool watched) async {
+    final ids = episodeIds.toList();
+    if (ids.isEmpty) return;
+    await (update(episodes)..where((e) => e.id.isIn(ids))).write(
+      EpisodesCompanion(
+        watched: Value(watched),
+        positionMs: const Value(0),
+        lastPlayedAt: watched ? Value(DateTime.now()) : const Value(null),
+      ),
+    );
+  }
+
+  Future<void> setSeasonWatched(int showId, int season, bool watched) async {
+    final rows = await (select(episodes)
+          ..where((e) =>
+              e.showId.equals(showId) &
+              e.season.equals(season) &
+              e.missing.equals(false)))
+        .get();
+    await setWatched(rows.map((e) => e.id), watched);
+  }
+
+  Future<void> setShowWatched(int showId, bool watched) async {
+    final rows = await (select(episodes)
+          ..where((e) => e.showId.equals(showId) & e.missing.equals(false)))
+        .get();
+    await setWatched(rows.map((e) => e.id), watched);
+  }
+
+  /// Shows with something to resume or a next episode, most recent first.
+  Stream<List<ContinueItem>> watchContinueWatching({int limit = 20}) {
+    final q = select(episodes)
+      ..where((e) => e.showId.isNotNull() & e.missing.equals(false));
+    return q.watch().asyncMap((rows) async {
+      final byShow = <int, List<Episode>>{};
+      for (final e in rows) {
+        byShow.putIfAbsent(e.showId!, () => []).add(e);
+      }
+      final items = <ContinueItem>[];
+      for (final entry in byShow.entries) {
+        final target = continueTarget(entry.value.map(episodeRef));
+        if (target == null) continue;
+        final ep = entry.value.firstWhere((e) => e.id == target.episode.id);
+        final show = await (select(shows)..where((s) => s.id.equals(entry.key)))
+            .getSingleOrNull();
+        if (show == null) continue;
+        items.add(ContinueItem(show, ep, target.resumeMs, target.lastPlayed));
+      }
+      items.sort((a, b) => b.lastPlayed.compareTo(a.lastPlayed));
+      return items.take(limit).toList();
+    });
+  }
+
   Stream<Show> watchShow(int id) =>
       (select(shows)..where((s) => s.id.equals(id))).watchSingle();
 
@@ -177,3 +274,23 @@ class ShowWithCount {
   final Show show;
   final int episodeCount;
 }
+
+class ContinueItem {
+  ContinueItem(this.show, this.episode, this.resumeMs, this.lastPlayed);
+  final Show show;
+  final Episode episode;
+
+  /// 0 = starts from the beginning (next episode).
+  final int resumeMs;
+  final DateTime lastPlayed;
+}
+
+EpRef episodeRef(Episode e) => EpRef(
+      id: e.id,
+      season: e.season ?? 0,
+      episode: e.episode ?? 0,
+      watched: e.watched,
+      positionMs: e.positionMs,
+      durationMs: e.durationMs,
+      lastPlayedAt: e.lastPlayedAt,
+    );

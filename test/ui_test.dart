@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_watcher/data/database.dart';
+import 'package:tv_watcher/ui/continue_row.dart';
 import 'package:tv_watcher/ui/home_page.dart';
 import 'package:tv_watcher/ui/manage_pages.dart';
 import 'package:tv_watcher/ui/poster_card.dart';
@@ -146,12 +147,93 @@ void main() {
     await t.tap(find.text('Assign all'));
     await settle(t);
 
-    final rows = await (db.select(db.episodes)
-          ..where((e) => e.showId.isNotNull()))
-        .get();
+    final rows = (await t.runAsync(() => (db.select(db.episodes)
+              ..where((e) => e.showId.isNotNull()))
+            .get()))!;
     expect(rows.length, 3);
     expect(rows.every((e) => e.season == 2), isTrue);
     expect(rows.map((e) => e.episode).toSet(), {1, 2, 3});
+  });
+
+  testWidgets('home: continue watching row resumes at saved position',
+      (t) async {
+    bigScreen(t);
+    final id = await addShow('Epsilon', {
+      1: ['Pilot', 'Second']
+    });
+    final eps = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    await db.saveProgress(eps[1].id, positionMs: 754000, durationMs: 1500000);
+
+    await t.pumpWidget(app(HomePage(db: db)));
+    await settle(t);
+
+    expect(find.text('Continue watching'), findsOneWidget);
+    expect(find.byType(ContinueCard), findsOneWidget);
+    expect(find.text('Resume at 12:34'), findsOneWidget);
+    expect(find.textContaining('S1E2'), findsOneWidget);
+  });
+
+  testWidgets('home: no continue row before anything is played', (t) async {
+    bigScreen(t);
+    await addShow('Zeta', {
+      1: ['One']
+    });
+    await t.pumpWidget(app(HomePage(db: db)));
+    await settle(t);
+    expect(find.text('Continue watching'), findsNothing);
+  });
+
+  testWidgets('show page: resume button, progress bar, watched check',
+      (t) async {
+    bigScreen(t);
+    final id = await addShow('Eta', {
+      1: ['One', 'Two', 'Three']
+    });
+    final eps = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    await db.saveProgress(eps[0].id, positionMs: 990000, durationMs: 1000000);
+    await db.saveProgress(eps[1].id, positionMs: 400000, durationMs: 1000000);
+
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    expect(find.text('Resume S1E2'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('show page: mark season watched via menu', (t) async {
+    bigScreen(t);
+    final id = await addShow('Theta', {
+      1: ['One', 'Two']
+    });
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    await t.tap(find.byTooltip('Season actions'));
+    await settle(t);
+    await t.tap(find.text('Mark season watched'));
+    await settle(t);
+
+    final rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    expect(rows.every((e) => e.watched), isTrue);
+    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(2));
+  });
+
+  testWidgets('show page: toggle one episode watched via its menu', (t) async {
+    bigScreen(t);
+    final id = await addShow('Iota', {
+      1: ['One', 'Two']
+    });
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    await t.tap(find.byTooltip('Episode actions').first);
+    await settle(t);
+    await t.tap(find.text('Mark watched'));
+    await settle(t);
+
+    final rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    expect(rows.where((e) => e.watched).length, 1);
   });
 
   test('defaultSeason picks first non-zero season', () {

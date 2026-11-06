@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../library/scanner.dart';
 import '../metadata/metadata_service.dart';
 import '../player/player_page.dart';
+import 'continue_row.dart';
 import 'manage_pages.dart';
 import 'poster_card.dart';
 import 'show_page.dart';
@@ -155,6 +156,7 @@ class _HomePageState extends State<HomePage> {
               if (shows == null) return const SizedBox.shrink();
               if (shows.isEmpty) return _Empty(onAdd: _addFolder);
               return _ShowGrid(
+                db: db,
                 shows: shows,
                 onOpen: (s) => _push(
                     ShowPage(db: db, meta: widget.meta, showId: s.show.id)),
@@ -168,13 +170,16 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _ShowGrid extends StatelessWidget {
-  const _ShowGrid({required this.shows, required this.onOpen});
+  const _ShowGrid(
+      {required this.db, required this.shows, required this.onOpen});
+  final AppDatabase db;
   final List<ShowWithCount> shows;
   final ValueChanged<ShowWithCount> onOpen;
 
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(slivers: [
+      SliverToBoxAdapter(child: ContinueRow(db: db)),
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
         sliver: SliverToBoxAdapter(
