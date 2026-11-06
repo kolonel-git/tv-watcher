@@ -239,8 +239,100 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tmdbIdMeta = const VerificationMeta('tmdbId');
   @override
-  List<GeneratedColumn> get $columns => [id, name, key, year];
+  late final GeneratedColumn<int> tmdbId = GeneratedColumn<int>(
+    'tmdb_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tmdbNameMeta = const VerificationMeta(
+    'tmdbName',
+  );
+  @override
+  late final GeneratedColumn<String> tmdbName = GeneratedColumn<String>(
+    'tmdb_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _overviewMeta = const VerificationMeta(
+    'overview',
+  );
+  @override
+  late final GeneratedColumn<String> overview = GeneratedColumn<String>(
+    'overview',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _posterFileMeta = const VerificationMeta(
+    'posterFile',
+  );
+  @override
+  late final GeneratedColumn<String> posterFile = GeneratedColumn<String>(
+    'poster_file',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backdropFileMeta = const VerificationMeta(
+    'backdropFile',
+  );
+  @override
+  late final GeneratedColumn<String> backdropFile = GeneratedColumn<String>(
+    'backdrop_file',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _metaStatusMeta = const VerificationMeta(
+    'metaStatus',
+  );
+  @override
+  late final GeneratedColumn<String> metaStatus = GeneratedColumn<String>(
+    'meta_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _metaLockedMeta = const VerificationMeta(
+    'metaLocked',
+  );
+  @override
+  late final GeneratedColumn<bool> metaLocked = GeneratedColumn<bool>(
+    'meta_locked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("meta_locked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    key,
+    year,
+    tmdbId,
+    tmdbName,
+    overview,
+    posterFile,
+    backdropFile,
+    metaStatus,
+    metaLocked,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -278,6 +370,51 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
         year.isAcceptableOrUnknown(data['year']!, _yearMeta),
       );
     }
+    if (data.containsKey('tmdb_id')) {
+      context.handle(
+        _tmdbIdMeta,
+        tmdbId.isAcceptableOrUnknown(data['tmdb_id']!, _tmdbIdMeta),
+      );
+    }
+    if (data.containsKey('tmdb_name')) {
+      context.handle(
+        _tmdbNameMeta,
+        tmdbName.isAcceptableOrUnknown(data['tmdb_name']!, _tmdbNameMeta),
+      );
+    }
+    if (data.containsKey('overview')) {
+      context.handle(
+        _overviewMeta,
+        overview.isAcceptableOrUnknown(data['overview']!, _overviewMeta),
+      );
+    }
+    if (data.containsKey('poster_file')) {
+      context.handle(
+        _posterFileMeta,
+        posterFile.isAcceptableOrUnknown(data['poster_file']!, _posterFileMeta),
+      );
+    }
+    if (data.containsKey('backdrop_file')) {
+      context.handle(
+        _backdropFileMeta,
+        backdropFile.isAcceptableOrUnknown(
+          data['backdrop_file']!,
+          _backdropFileMeta,
+        ),
+      );
+    }
+    if (data.containsKey('meta_status')) {
+      context.handle(
+        _metaStatusMeta,
+        metaStatus.isAcceptableOrUnknown(data['meta_status']!, _metaStatusMeta),
+      );
+    }
+    if (data.containsKey('meta_locked')) {
+      context.handle(
+        _metaLockedMeta,
+        metaLocked.isAcceptableOrUnknown(data['meta_locked']!, _metaLockedMeta),
+      );
+    }
     return context;
   }
 
@@ -303,6 +440,34 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
         DriftSqlType.int,
         data['${effectivePrefix}year'],
       ),
+      tmdbId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tmdb_id'],
+      ),
+      tmdbName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tmdb_name'],
+      ),
+      overview: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}overview'],
+      ),
+      posterFile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}poster_file'],
+      ),
+      backdropFile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}backdrop_file'],
+      ),
+      metaStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}meta_status'],
+      )!,
+      metaLocked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}meta_locked'],
+      )!,
     );
   }
 
@@ -319,11 +484,31 @@ class Show extends DataClass implements Insertable<Show> {
   /// Normalised grouping key (lowercase alphanumerics).
   final String key;
   final int? year;
+  final int? tmdbId;
+  final String? tmdbName;
+  final String? overview;
+
+  /// Local cached artwork file paths.
+  final String? posterFile;
+  final String? backdropFile;
+
+  /// none | matched | ambiguous | nomatch
+  final String metaStatus;
+
+  /// User picked the match by hand; never auto-rematched.
+  final bool metaLocked;
   const Show({
     required this.id,
     required this.name,
     required this.key,
     this.year,
+    this.tmdbId,
+    this.tmdbName,
+    this.overview,
+    this.posterFile,
+    this.backdropFile,
+    required this.metaStatus,
+    required this.metaLocked,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -334,6 +519,23 @@ class Show extends DataClass implements Insertable<Show> {
     if (!nullToAbsent || year != null) {
       map['year'] = Variable<int>(year);
     }
+    if (!nullToAbsent || tmdbId != null) {
+      map['tmdb_id'] = Variable<int>(tmdbId);
+    }
+    if (!nullToAbsent || tmdbName != null) {
+      map['tmdb_name'] = Variable<String>(tmdbName);
+    }
+    if (!nullToAbsent || overview != null) {
+      map['overview'] = Variable<String>(overview);
+    }
+    if (!nullToAbsent || posterFile != null) {
+      map['poster_file'] = Variable<String>(posterFile);
+    }
+    if (!nullToAbsent || backdropFile != null) {
+      map['backdrop_file'] = Variable<String>(backdropFile);
+    }
+    map['meta_status'] = Variable<String>(metaStatus);
+    map['meta_locked'] = Variable<bool>(metaLocked);
     return map;
   }
 
@@ -343,6 +545,23 @@ class Show extends DataClass implements Insertable<Show> {
       name: Value(name),
       key: Value(key),
       year: year == null && nullToAbsent ? const Value.absent() : Value(year),
+      tmdbId: tmdbId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tmdbId),
+      tmdbName: tmdbName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tmdbName),
+      overview: overview == null && nullToAbsent
+          ? const Value.absent()
+          : Value(overview),
+      posterFile: posterFile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(posterFile),
+      backdropFile: backdropFile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backdropFile),
+      metaStatus: Value(metaStatus),
+      metaLocked: Value(metaLocked),
     );
   }
 
@@ -356,6 +575,13 @@ class Show extends DataClass implements Insertable<Show> {
       name: serializer.fromJson<String>(json['name']),
       key: serializer.fromJson<String>(json['key']),
       year: serializer.fromJson<int?>(json['year']),
+      tmdbId: serializer.fromJson<int?>(json['tmdbId']),
+      tmdbName: serializer.fromJson<String?>(json['tmdbName']),
+      overview: serializer.fromJson<String?>(json['overview']),
+      posterFile: serializer.fromJson<String?>(json['posterFile']),
+      backdropFile: serializer.fromJson<String?>(json['backdropFile']),
+      metaStatus: serializer.fromJson<String>(json['metaStatus']),
+      metaLocked: serializer.fromJson<bool>(json['metaLocked']),
     );
   }
   @override
@@ -366,6 +592,13 @@ class Show extends DataClass implements Insertable<Show> {
       'name': serializer.toJson<String>(name),
       'key': serializer.toJson<String>(key),
       'year': serializer.toJson<int?>(year),
+      'tmdbId': serializer.toJson<int?>(tmdbId),
+      'tmdbName': serializer.toJson<String?>(tmdbName),
+      'overview': serializer.toJson<String?>(overview),
+      'posterFile': serializer.toJson<String?>(posterFile),
+      'backdropFile': serializer.toJson<String?>(backdropFile),
+      'metaStatus': serializer.toJson<String>(metaStatus),
+      'metaLocked': serializer.toJson<bool>(metaLocked),
     };
   }
 
@@ -374,11 +607,25 @@ class Show extends DataClass implements Insertable<Show> {
     String? name,
     String? key,
     Value<int?> year = const Value.absent(),
+    Value<int?> tmdbId = const Value.absent(),
+    Value<String?> tmdbName = const Value.absent(),
+    Value<String?> overview = const Value.absent(),
+    Value<String?> posterFile = const Value.absent(),
+    Value<String?> backdropFile = const Value.absent(),
+    String? metaStatus,
+    bool? metaLocked,
   }) => Show(
     id: id ?? this.id,
     name: name ?? this.name,
     key: key ?? this.key,
     year: year.present ? year.value : this.year,
+    tmdbId: tmdbId.present ? tmdbId.value : this.tmdbId,
+    tmdbName: tmdbName.present ? tmdbName.value : this.tmdbName,
+    overview: overview.present ? overview.value : this.overview,
+    posterFile: posterFile.present ? posterFile.value : this.posterFile,
+    backdropFile: backdropFile.present ? backdropFile.value : this.backdropFile,
+    metaStatus: metaStatus ?? this.metaStatus,
+    metaLocked: metaLocked ?? this.metaLocked,
   );
   Show copyWithCompanion(ShowsCompanion data) {
     return Show(
@@ -386,6 +633,21 @@ class Show extends DataClass implements Insertable<Show> {
       name: data.name.present ? data.name.value : this.name,
       key: data.key.present ? data.key.value : this.key,
       year: data.year.present ? data.year.value : this.year,
+      tmdbId: data.tmdbId.present ? data.tmdbId.value : this.tmdbId,
+      tmdbName: data.tmdbName.present ? data.tmdbName.value : this.tmdbName,
+      overview: data.overview.present ? data.overview.value : this.overview,
+      posterFile: data.posterFile.present
+          ? data.posterFile.value
+          : this.posterFile,
+      backdropFile: data.backdropFile.present
+          ? data.backdropFile.value
+          : this.backdropFile,
+      metaStatus: data.metaStatus.present
+          ? data.metaStatus.value
+          : this.metaStatus,
+      metaLocked: data.metaLocked.present
+          ? data.metaLocked.value
+          : this.metaLocked,
     );
   }
 
@@ -395,13 +657,32 @@ class Show extends DataClass implements Insertable<Show> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('key: $key, ')
-          ..write('year: $year')
+          ..write('year: $year, ')
+          ..write('tmdbId: $tmdbId, ')
+          ..write('tmdbName: $tmdbName, ')
+          ..write('overview: $overview, ')
+          ..write('posterFile: $posterFile, ')
+          ..write('backdropFile: $backdropFile, ')
+          ..write('metaStatus: $metaStatus, ')
+          ..write('metaLocked: $metaLocked')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, key, year);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    key,
+    year,
+    tmdbId,
+    tmdbName,
+    overview,
+    posterFile,
+    backdropFile,
+    metaStatus,
+    metaLocked,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -409,7 +690,14 @@ class Show extends DataClass implements Insertable<Show> {
           other.id == this.id &&
           other.name == this.name &&
           other.key == this.key &&
-          other.year == this.year);
+          other.year == this.year &&
+          other.tmdbId == this.tmdbId &&
+          other.tmdbName == this.tmdbName &&
+          other.overview == this.overview &&
+          other.posterFile == this.posterFile &&
+          other.backdropFile == this.backdropFile &&
+          other.metaStatus == this.metaStatus &&
+          other.metaLocked == this.metaLocked);
 }
 
 class ShowsCompanion extends UpdateCompanion<Show> {
@@ -417,17 +705,38 @@ class ShowsCompanion extends UpdateCompanion<Show> {
   final Value<String> name;
   final Value<String> key;
   final Value<int?> year;
+  final Value<int?> tmdbId;
+  final Value<String?> tmdbName;
+  final Value<String?> overview;
+  final Value<String?> posterFile;
+  final Value<String?> backdropFile;
+  final Value<String> metaStatus;
+  final Value<bool> metaLocked;
   const ShowsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.key = const Value.absent(),
     this.year = const Value.absent(),
+    this.tmdbId = const Value.absent(),
+    this.tmdbName = const Value.absent(),
+    this.overview = const Value.absent(),
+    this.posterFile = const Value.absent(),
+    this.backdropFile = const Value.absent(),
+    this.metaStatus = const Value.absent(),
+    this.metaLocked = const Value.absent(),
   });
   ShowsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     required String key,
     this.year = const Value.absent(),
+    this.tmdbId = const Value.absent(),
+    this.tmdbName = const Value.absent(),
+    this.overview = const Value.absent(),
+    this.posterFile = const Value.absent(),
+    this.backdropFile = const Value.absent(),
+    this.metaStatus = const Value.absent(),
+    this.metaLocked = const Value.absent(),
   }) : name = Value(name),
        key = Value(key);
   static Insertable<Show> custom({
@@ -435,12 +744,26 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     Expression<String>? name,
     Expression<String>? key,
     Expression<int>? year,
+    Expression<int>? tmdbId,
+    Expression<String>? tmdbName,
+    Expression<String>? overview,
+    Expression<String>? posterFile,
+    Expression<String>? backdropFile,
+    Expression<String>? metaStatus,
+    Expression<bool>? metaLocked,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (key != null) 'key': key,
       if (year != null) 'year': year,
+      if (tmdbId != null) 'tmdb_id': tmdbId,
+      if (tmdbName != null) 'tmdb_name': tmdbName,
+      if (overview != null) 'overview': overview,
+      if (posterFile != null) 'poster_file': posterFile,
+      if (backdropFile != null) 'backdrop_file': backdropFile,
+      if (metaStatus != null) 'meta_status': metaStatus,
+      if (metaLocked != null) 'meta_locked': metaLocked,
     });
   }
 
@@ -449,12 +772,26 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     Value<String>? name,
     Value<String>? key,
     Value<int?>? year,
+    Value<int?>? tmdbId,
+    Value<String?>? tmdbName,
+    Value<String?>? overview,
+    Value<String?>? posterFile,
+    Value<String?>? backdropFile,
+    Value<String>? metaStatus,
+    Value<bool>? metaLocked,
   }) {
     return ShowsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       key: key ?? this.key,
       year: year ?? this.year,
+      tmdbId: tmdbId ?? this.tmdbId,
+      tmdbName: tmdbName ?? this.tmdbName,
+      overview: overview ?? this.overview,
+      posterFile: posterFile ?? this.posterFile,
+      backdropFile: backdropFile ?? this.backdropFile,
+      metaStatus: metaStatus ?? this.metaStatus,
+      metaLocked: metaLocked ?? this.metaLocked,
     );
   }
 
@@ -473,6 +810,27 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     if (year.present) {
       map['year'] = Variable<int>(year.value);
     }
+    if (tmdbId.present) {
+      map['tmdb_id'] = Variable<int>(tmdbId.value);
+    }
+    if (tmdbName.present) {
+      map['tmdb_name'] = Variable<String>(tmdbName.value);
+    }
+    if (overview.present) {
+      map['overview'] = Variable<String>(overview.value);
+    }
+    if (posterFile.present) {
+      map['poster_file'] = Variable<String>(posterFile.value);
+    }
+    if (backdropFile.present) {
+      map['backdrop_file'] = Variable<String>(backdropFile.value);
+    }
+    if (metaStatus.present) {
+      map['meta_status'] = Variable<String>(metaStatus.value);
+    }
+    if (metaLocked.present) {
+      map['meta_locked'] = Variable<bool>(metaLocked.value);
+    }
     return map;
   }
 
@@ -482,7 +840,14 @@ class ShowsCompanion extends UpdateCompanion<Show> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('key: $key, ')
-          ..write('year: $year')
+          ..write('year: $year, ')
+          ..write('tmdbId: $tmdbId, ')
+          ..write('tmdbName: $tmdbName, ')
+          ..write('overview: $overview, ')
+          ..write('posterFile: $posterFile, ')
+          ..write('backdropFile: $backdropFile, ')
+          ..write('metaStatus: $metaStatus, ')
+          ..write('metaLocked: $metaLocked')
           ..write(')'))
         .toString();
   }
@@ -584,6 +949,61 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tmdbTitleMeta = const VerificationMeta(
+    'tmdbTitle',
+  );
+  @override
+  late final GeneratedColumn<String> tmdbTitle = GeneratedColumn<String>(
+    'tmdb_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _overviewMeta = const VerificationMeta(
+    'overview',
+  );
+  @override
+  late final GeneratedColumn<String> overview = GeneratedColumn<String>(
+    'overview',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _runtimeMeta = const VerificationMeta(
+    'runtime',
+  );
+  @override
+  late final GeneratedColumn<int> runtime = GeneratedColumn<int>(
+    'runtime',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _airDateMeta = const VerificationMeta(
+    'airDate',
+  );
+  @override
+  late final GeneratedColumn<String> airDate = GeneratedColumn<String>(
+    'air_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stillFileMeta = const VerificationMeta(
+    'stillFile',
+  );
+  @override
+  late final GeneratedColumn<String> stillFile = GeneratedColumn<String>(
+    'still_file',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _missingMeta = const VerificationMeta(
     'missing',
   );
@@ -634,6 +1054,11 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     episode,
     endEpisode,
     title,
+    tmdbTitle,
+    overview,
+    runtime,
+    airDate,
+    stillFile,
     missing,
     manual,
     addedAt,
@@ -699,6 +1124,36 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         title.isAcceptableOrUnknown(data['title']!, _titleMeta),
       );
     }
+    if (data.containsKey('tmdb_title')) {
+      context.handle(
+        _tmdbTitleMeta,
+        tmdbTitle.isAcceptableOrUnknown(data['tmdb_title']!, _tmdbTitleMeta),
+      );
+    }
+    if (data.containsKey('overview')) {
+      context.handle(
+        _overviewMeta,
+        overview.isAcceptableOrUnknown(data['overview']!, _overviewMeta),
+      );
+    }
+    if (data.containsKey('runtime')) {
+      context.handle(
+        _runtimeMeta,
+        runtime.isAcceptableOrUnknown(data['runtime']!, _runtimeMeta),
+      );
+    }
+    if (data.containsKey('air_date')) {
+      context.handle(
+        _airDateMeta,
+        airDate.isAcceptableOrUnknown(data['air_date']!, _airDateMeta),
+      );
+    }
+    if (data.containsKey('still_file')) {
+      context.handle(
+        _stillFileMeta,
+        stillFile.isAcceptableOrUnknown(data['still_file']!, _stillFileMeta),
+      );
+    }
     if (data.containsKey('missing')) {
       context.handle(
         _missingMeta,
@@ -758,6 +1213,26 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       ),
+      tmdbTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tmdb_title'],
+      ),
+      overview: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}overview'],
+      ),
+      runtime: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}runtime'],
+      ),
+      airDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}air_date'],
+      ),
+      stillFile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}still_file'],
+      ),
       missing: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}missing'],
@@ -788,6 +1263,11 @@ class Episode extends DataClass implements Insertable<Episode> {
   final int? episode;
   final int? endEpisode;
   final String? title;
+  final String? tmdbTitle;
+  final String? overview;
+  final int? runtime;
+  final String? airDate;
+  final String? stillFile;
 
   /// File no longer found on disk at last scan. Row kept to preserve data.
   final bool missing;
@@ -804,6 +1284,11 @@ class Episode extends DataClass implements Insertable<Episode> {
     this.episode,
     this.endEpisode,
     this.title,
+    this.tmdbTitle,
+    this.overview,
+    this.runtime,
+    this.airDate,
+    this.stillFile,
     required this.missing,
     required this.manual,
     required this.addedAt,
@@ -828,6 +1313,21 @@ class Episode extends DataClass implements Insertable<Episode> {
     }
     if (!nullToAbsent || title != null) {
       map['title'] = Variable<String>(title);
+    }
+    if (!nullToAbsent || tmdbTitle != null) {
+      map['tmdb_title'] = Variable<String>(tmdbTitle);
+    }
+    if (!nullToAbsent || overview != null) {
+      map['overview'] = Variable<String>(overview);
+    }
+    if (!nullToAbsent || runtime != null) {
+      map['runtime'] = Variable<int>(runtime);
+    }
+    if (!nullToAbsent || airDate != null) {
+      map['air_date'] = Variable<String>(airDate);
+    }
+    if (!nullToAbsent || stillFile != null) {
+      map['still_file'] = Variable<String>(stillFile);
     }
     map['missing'] = Variable<bool>(missing);
     map['manual'] = Variable<bool>(manual);
@@ -855,6 +1355,21 @@ class Episode extends DataClass implements Insertable<Episode> {
       title: title == null && nullToAbsent
           ? const Value.absent()
           : Value(title),
+      tmdbTitle: tmdbTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tmdbTitle),
+      overview: overview == null && nullToAbsent
+          ? const Value.absent()
+          : Value(overview),
+      runtime: runtime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(runtime),
+      airDate: airDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(airDate),
+      stillFile: stillFile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stillFile),
       missing: Value(missing),
       manual: Value(manual),
       addedAt: Value(addedAt),
@@ -875,6 +1390,11 @@ class Episode extends DataClass implements Insertable<Episode> {
       episode: serializer.fromJson<int?>(json['episode']),
       endEpisode: serializer.fromJson<int?>(json['endEpisode']),
       title: serializer.fromJson<String?>(json['title']),
+      tmdbTitle: serializer.fromJson<String?>(json['tmdbTitle']),
+      overview: serializer.fromJson<String?>(json['overview']),
+      runtime: serializer.fromJson<int?>(json['runtime']),
+      airDate: serializer.fromJson<String?>(json['airDate']),
+      stillFile: serializer.fromJson<String?>(json['stillFile']),
       missing: serializer.fromJson<bool>(json['missing']),
       manual: serializer.fromJson<bool>(json['manual']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
@@ -892,6 +1412,11 @@ class Episode extends DataClass implements Insertable<Episode> {
       'episode': serializer.toJson<int?>(episode),
       'endEpisode': serializer.toJson<int?>(endEpisode),
       'title': serializer.toJson<String?>(title),
+      'tmdbTitle': serializer.toJson<String?>(tmdbTitle),
+      'overview': serializer.toJson<String?>(overview),
+      'runtime': serializer.toJson<int?>(runtime),
+      'airDate': serializer.toJson<String?>(airDate),
+      'stillFile': serializer.toJson<String?>(stillFile),
       'missing': serializer.toJson<bool>(missing),
       'manual': serializer.toJson<bool>(manual),
       'addedAt': serializer.toJson<DateTime>(addedAt),
@@ -907,6 +1432,11 @@ class Episode extends DataClass implements Insertable<Episode> {
     Value<int?> episode = const Value.absent(),
     Value<int?> endEpisode = const Value.absent(),
     Value<String?> title = const Value.absent(),
+    Value<String?> tmdbTitle = const Value.absent(),
+    Value<String?> overview = const Value.absent(),
+    Value<int?> runtime = const Value.absent(),
+    Value<String?> airDate = const Value.absent(),
+    Value<String?> stillFile = const Value.absent(),
     bool? missing,
     bool? manual,
     DateTime? addedAt,
@@ -919,6 +1449,11 @@ class Episode extends DataClass implements Insertable<Episode> {
     episode: episode.present ? episode.value : this.episode,
     endEpisode: endEpisode.present ? endEpisode.value : this.endEpisode,
     title: title.present ? title.value : this.title,
+    tmdbTitle: tmdbTitle.present ? tmdbTitle.value : this.tmdbTitle,
+    overview: overview.present ? overview.value : this.overview,
+    runtime: runtime.present ? runtime.value : this.runtime,
+    airDate: airDate.present ? airDate.value : this.airDate,
+    stillFile: stillFile.present ? stillFile.value : this.stillFile,
     missing: missing ?? this.missing,
     manual: manual ?? this.manual,
     addedAt: addedAt ?? this.addedAt,
@@ -935,6 +1470,11 @@ class Episode extends DataClass implements Insertable<Episode> {
           ? data.endEpisode.value
           : this.endEpisode,
       title: data.title.present ? data.title.value : this.title,
+      tmdbTitle: data.tmdbTitle.present ? data.tmdbTitle.value : this.tmdbTitle,
+      overview: data.overview.present ? data.overview.value : this.overview,
+      runtime: data.runtime.present ? data.runtime.value : this.runtime,
+      airDate: data.airDate.present ? data.airDate.value : this.airDate,
+      stillFile: data.stillFile.present ? data.stillFile.value : this.stillFile,
       missing: data.missing.present ? data.missing.value : this.missing,
       manual: data.manual.present ? data.manual.value : this.manual,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
@@ -952,6 +1492,11 @@ class Episode extends DataClass implements Insertable<Episode> {
           ..write('episode: $episode, ')
           ..write('endEpisode: $endEpisode, ')
           ..write('title: $title, ')
+          ..write('tmdbTitle: $tmdbTitle, ')
+          ..write('overview: $overview, ')
+          ..write('runtime: $runtime, ')
+          ..write('airDate: $airDate, ')
+          ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
           ..write('addedAt: $addedAt')
@@ -969,6 +1514,11 @@ class Episode extends DataClass implements Insertable<Episode> {
     episode,
     endEpisode,
     title,
+    tmdbTitle,
+    overview,
+    runtime,
+    airDate,
+    stillFile,
     missing,
     manual,
     addedAt,
@@ -985,6 +1535,11 @@ class Episode extends DataClass implements Insertable<Episode> {
           other.episode == this.episode &&
           other.endEpisode == this.endEpisode &&
           other.title == this.title &&
+          other.tmdbTitle == this.tmdbTitle &&
+          other.overview == this.overview &&
+          other.runtime == this.runtime &&
+          other.airDate == this.airDate &&
+          other.stillFile == this.stillFile &&
           other.missing == this.missing &&
           other.manual == this.manual &&
           other.addedAt == this.addedAt);
@@ -999,6 +1554,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
   final Value<int?> episode;
   final Value<int?> endEpisode;
   final Value<String?> title;
+  final Value<String?> tmdbTitle;
+  final Value<String?> overview;
+  final Value<int?> runtime;
+  final Value<String?> airDate;
+  final Value<String?> stillFile;
   final Value<bool> missing;
   final Value<bool> manual;
   final Value<DateTime> addedAt;
@@ -1011,6 +1571,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.episode = const Value.absent(),
     this.endEpisode = const Value.absent(),
     this.title = const Value.absent(),
+    this.tmdbTitle = const Value.absent(),
+    this.overview = const Value.absent(),
+    this.runtime = const Value.absent(),
+    this.airDate = const Value.absent(),
+    this.stillFile = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
@@ -1024,6 +1589,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.episode = const Value.absent(),
     this.endEpisode = const Value.absent(),
     this.title = const Value.absent(),
+    this.tmdbTitle = const Value.absent(),
+    this.overview = const Value.absent(),
+    this.runtime = const Value.absent(),
+    this.airDate = const Value.absent(),
+    this.stillFile = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
     this.addedAt = const Value.absent(),
@@ -1038,6 +1608,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Expression<int>? episode,
     Expression<int>? endEpisode,
     Expression<String>? title,
+    Expression<String>? tmdbTitle,
+    Expression<String>? overview,
+    Expression<int>? runtime,
+    Expression<String>? airDate,
+    Expression<String>? stillFile,
     Expression<bool>? missing,
     Expression<bool>? manual,
     Expression<DateTime>? addedAt,
@@ -1051,6 +1626,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       if (episode != null) 'episode': episode,
       if (endEpisode != null) 'end_episode': endEpisode,
       if (title != null) 'title': title,
+      if (tmdbTitle != null) 'tmdb_title': tmdbTitle,
+      if (overview != null) 'overview': overview,
+      if (runtime != null) 'runtime': runtime,
+      if (airDate != null) 'air_date': airDate,
+      if (stillFile != null) 'still_file': stillFile,
       if (missing != null) 'missing': missing,
       if (manual != null) 'manual': manual,
       if (addedAt != null) 'added_at': addedAt,
@@ -1066,6 +1646,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Value<int?>? episode,
     Value<int?>? endEpisode,
     Value<String?>? title,
+    Value<String?>? tmdbTitle,
+    Value<String?>? overview,
+    Value<int?>? runtime,
+    Value<String?>? airDate,
+    Value<String?>? stillFile,
     Value<bool>? missing,
     Value<bool>? manual,
     Value<DateTime>? addedAt,
@@ -1079,6 +1664,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       episode: episode ?? this.episode,
       endEpisode: endEpisode ?? this.endEpisode,
       title: title ?? this.title,
+      tmdbTitle: tmdbTitle ?? this.tmdbTitle,
+      overview: overview ?? this.overview,
+      runtime: runtime ?? this.runtime,
+      airDate: airDate ?? this.airDate,
+      stillFile: stillFile ?? this.stillFile,
       missing: missing ?? this.missing,
       manual: manual ?? this.manual,
       addedAt: addedAt ?? this.addedAt,
@@ -1112,6 +1702,21 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
+    if (tmdbTitle.present) {
+      map['tmdb_title'] = Variable<String>(tmdbTitle.value);
+    }
+    if (overview.present) {
+      map['overview'] = Variable<String>(overview.value);
+    }
+    if (runtime.present) {
+      map['runtime'] = Variable<int>(runtime.value);
+    }
+    if (airDate.present) {
+      map['air_date'] = Variable<String>(airDate.value);
+    }
+    if (stillFile.present) {
+      map['still_file'] = Variable<String>(stillFile.value);
+    }
     if (missing.present) {
       map['missing'] = Variable<bool>(missing.value);
     }
@@ -1135,6 +1740,11 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
           ..write('episode: $episode, ')
           ..write('endEpisode: $endEpisode, ')
           ..write('title: $title, ')
+          ..write('tmdbTitle: $tmdbTitle, ')
+          ..write('overview: $overview, ')
+          ..write('runtime: $runtime, ')
+          ..write('airDate: $airDate, ')
+          ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
           ..write('addedAt: $addedAt')
@@ -1397,12 +2007,26 @@ typedef $$ShowsTableCreateCompanionBuilder = ShowsCompanion Function({
   required String name,
   required String key,
   Value<int?> year,
+  Value<int?> tmdbId,
+  Value<String?> tmdbName,
+  Value<String?> overview,
+  Value<String?> posterFile,
+  Value<String?> backdropFile,
+  Value<String> metaStatus,
+  Value<bool> metaLocked,
 });
 typedef $$ShowsTableUpdateCompanionBuilder = ShowsCompanion Function({
   Value<int> id,
   Value<String> name,
   Value<String> key,
   Value<int?> year,
+  Value<int?> tmdbId,
+  Value<String?> tmdbName,
+  Value<String?> overview,
+  Value<String?> posterFile,
+  Value<String?> backdropFile,
+  Value<String> metaStatus,
+  Value<bool> metaLocked,
 });
 
 final class $$ShowsTableReferences
@@ -1454,6 +2078,41 @@ class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
 
   ColumnFilters<int> get year => $composableBuilder(
     column: $table.year,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tmdbId => $composableBuilder(
+    column: $table.tmdbId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tmdbName => $composableBuilder(
+    column: $table.tmdbName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get overview => $composableBuilder(
+    column: $table.overview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get posterFile => $composableBuilder(
+    column: $table.posterFile,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get backdropFile => $composableBuilder(
+    column: $table.backdropFile,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metaStatus => $composableBuilder(
+    column: $table.metaStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get metaLocked => $composableBuilder(
+    column: $table.metaLocked,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1511,6 +2170,41 @@ class $$ShowsTableOrderingComposer
     column: $table.year,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get tmdbId => $composableBuilder(
+    column: $table.tmdbId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tmdbName => $composableBuilder(
+    column: $table.tmdbName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get overview => $composableBuilder(
+    column: $table.overview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get posterFile => $composableBuilder(
+    column: $table.posterFile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get backdropFile => $composableBuilder(
+    column: $table.backdropFile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get metaStatus => $composableBuilder(
+    column: $table.metaStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get metaLocked => $composableBuilder(
+    column: $table.metaLocked,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ShowsTableAnnotationComposer
@@ -1533,6 +2227,35 @@ class $$ShowsTableAnnotationComposer
 
   GeneratedColumn<int> get year =>
       $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<int> get tmdbId =>
+      $composableBuilder(column: $table.tmdbId, builder: (column) => column);
+
+  GeneratedColumn<String> get tmdbName =>
+      $composableBuilder(column: $table.tmdbName, builder: (column) => column);
+
+  GeneratedColumn<String> get overview =>
+      $composableBuilder(column: $table.overview, builder: (column) => column);
+
+  GeneratedColumn<String> get posterFile => $composableBuilder(
+    column: $table.posterFile,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get backdropFile => $composableBuilder(
+    column: $table.backdropFile,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get metaStatus => $composableBuilder(
+    column: $table.metaStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get metaLocked => $composableBuilder(
+    column: $table.metaLocked,
+    builder: (column) => column,
+  );
 
   Expression<T> episodesRefs<T extends Object>(
     Expression<T> Function($$EpisodesTableAnnotationComposer a) f,
@@ -1586,18 +2309,58 @@ class $$ShowsTableTableManager
               $$ShowsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$ShowsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<String> key = const Value.absent(),
-            Value<int?> year = const Value.absent(),
-          }) => ShowsCompanion(id: id, name: name, key: key, year: year),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String name,
-            required String key,
-            Value<int?> year = const Value.absent(),
-          }) => ShowsCompanion.insert(id: id, name: name, key: key, year: year),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> key = const Value.absent(),
+                Value<int?> year = const Value.absent(),
+                Value<int?> tmdbId = const Value.absent(),
+                Value<String?> tmdbName = const Value.absent(),
+                Value<String?> overview = const Value.absent(),
+                Value<String?> posterFile = const Value.absent(),
+                Value<String?> backdropFile = const Value.absent(),
+                Value<String> metaStatus = const Value.absent(),
+                Value<bool> metaLocked = const Value.absent(),
+              }) => ShowsCompanion(
+                id: id,
+                name: name,
+                key: key,
+                year: year,
+                tmdbId: tmdbId,
+                tmdbName: tmdbName,
+                overview: overview,
+                posterFile: posterFile,
+                backdropFile: backdropFile,
+                metaStatus: metaStatus,
+                metaLocked: metaLocked,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String key,
+                Value<int?> year = const Value.absent(),
+                Value<int?> tmdbId = const Value.absent(),
+                Value<String?> tmdbName = const Value.absent(),
+                Value<String?> overview = const Value.absent(),
+                Value<String?> posterFile = const Value.absent(),
+                Value<String?> backdropFile = const Value.absent(),
+                Value<String> metaStatus = const Value.absent(),
+                Value<bool> metaLocked = const Value.absent(),
+              }) => ShowsCompanion.insert(
+                id: id,
+                name: name,
+                key: key,
+                year: year,
+                tmdbId: tmdbId,
+                tmdbName: tmdbName,
+                overview: overview,
+                posterFile: posterFile,
+                backdropFile: backdropFile,
+                metaStatus: metaStatus,
+                metaLocked: metaLocked,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -1660,6 +2423,11 @@ typedef $$EpisodesTableCreateCompanionBuilder = EpisodesCompanion Function({
   Value<int?> episode,
   Value<int?> endEpisode,
   Value<String?> title,
+  Value<String?> tmdbTitle,
+  Value<String?> overview,
+  Value<int?> runtime,
+  Value<String?> airDate,
+  Value<String?> stillFile,
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
@@ -1673,6 +2441,11 @@ typedef $$EpisodesTableUpdateCompanionBuilder = EpisodesCompanion Function({
   Value<int?> episode,
   Value<int?> endEpisode,
   Value<String?> title,
+  Value<String?> tmdbTitle,
+  Value<String?> overview,
+  Value<int?> runtime,
+  Value<String?> airDate,
+  Value<String?> stillFile,
   Value<bool> missing,
   Value<bool> manual,
   Value<DateTime> addedAt,
@@ -1753,6 +2526,31 @@ class $$EpisodesTableFilterComposer
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tmdbTitle => $composableBuilder(
+    column: $table.tmdbTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get overview => $composableBuilder(
+    column: $table.overview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get runtime => $composableBuilder(
+    column: $table.runtime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get airDate => $composableBuilder(
+    column: $table.airDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stillFile => $composableBuilder(
+    column: $table.stillFile,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1857,6 +2655,31 @@ class $$EpisodesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tmdbTitle => $composableBuilder(
+    column: $table.tmdbTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get overview => $composableBuilder(
+    column: $table.overview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get runtime => $composableBuilder(
+    column: $table.runtime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get airDate => $composableBuilder(
+    column: $table.airDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stillFile => $composableBuilder(
+    column: $table.stillFile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get missing => $composableBuilder(
     column: $table.missing,
     builder: (column) => ColumnOrderings(column),
@@ -1947,6 +2770,21 @@ class $$EpisodesTableAnnotationComposer
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get tmdbTitle =>
+      $composableBuilder(column: $table.tmdbTitle, builder: (column) => column);
+
+  GeneratedColumn<String> get overview =>
+      $composableBuilder(column: $table.overview, builder: (column) => column);
+
+  GeneratedColumn<int> get runtime =>
+      $composableBuilder(column: $table.runtime, builder: (column) => column);
+
+  GeneratedColumn<String> get airDate =>
+      $composableBuilder(column: $table.airDate, builder: (column) => column);
+
+  GeneratedColumn<String> get stillFile =>
+      $composableBuilder(column: $table.stillFile, builder: (column) => column);
 
   GeneratedColumn<bool> get missing =>
       $composableBuilder(column: $table.missing, builder: (column) => column);
@@ -2040,6 +2878,11 @@ class $$EpisodesTableTableManager
                 Value<int?> episode = const Value.absent(),
                 Value<int?> endEpisode = const Value.absent(),
                 Value<String?> title = const Value.absent(),
+                Value<String?> tmdbTitle = const Value.absent(),
+                Value<String?> overview = const Value.absent(),
+                Value<int?> runtime = const Value.absent(),
+                Value<String?> airDate = const Value.absent(),
+                Value<String?> stillFile = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
@@ -2052,6 +2895,11 @@ class $$EpisodesTableTableManager
                 episode: episode,
                 endEpisode: endEpisode,
                 title: title,
+                tmdbTitle: tmdbTitle,
+                overview: overview,
+                runtime: runtime,
+                airDate: airDate,
+                stillFile: stillFile,
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,
@@ -2066,6 +2914,11 @@ class $$EpisodesTableTableManager
                 Value<int?> episode = const Value.absent(),
                 Value<int?> endEpisode = const Value.absent(),
                 Value<String?> title = const Value.absent(),
+                Value<String?> tmdbTitle = const Value.absent(),
+                Value<String?> overview = const Value.absent(),
+                Value<int?> runtime = const Value.absent(),
+                Value<String?> airDate = const Value.absent(),
+                Value<String?> stillFile = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
@@ -2078,6 +2931,11 @@ class $$EpisodesTableTableManager
                 episode: episode,
                 endEpisode: endEpisode,
                 title: title,
+                tmdbTitle: tmdbTitle,
+                overview: overview,
+                runtime: runtime,
+                airDate: airDate,
+                stillFile: stillFile,
                 missing: missing,
                 manual: manual,
                 addedAt: addedAt,

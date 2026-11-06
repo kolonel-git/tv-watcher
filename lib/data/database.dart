@@ -15,6 +15,21 @@ class Shows extends Table {
   /// Normalised grouping key (lowercase alphanumerics).
   TextColumn get key => text().unique()();
   IntColumn get year => integer().nullable()();
+
+  // --- TMDB metadata (Sprint 3) ---
+  IntColumn get tmdbId => integer().nullable()();
+  TextColumn get tmdbName => text().nullable()();
+  TextColumn get overview => text().nullable()();
+
+  /// Local cached artwork file paths.
+  TextColumn get posterFile => text().nullable()();
+  TextColumn get backdropFile => text().nullable()();
+
+  /// none | matched | ambiguous | nomatch
+  TextColumn get metaStatus => text().withDefault(const Constant('none'))();
+
+  /// User picked the match by hand; never auto-rematched.
+  BoolColumn get metaLocked => boolean().withDefault(const Constant(false))();
 }
 
 class Episodes extends Table {
@@ -26,6 +41,13 @@ class Episodes extends Table {
   IntColumn get episode => integer().nullable()();
   IntColumn get endEpisode => integer().nullable()();
   TextColumn get title => text().nullable()();
+
+  // --- TMDB metadata (Sprint 3) ---
+  TextColumn get tmdbTitle => text().nullable()();
+  TextColumn get overview => text().nullable()();
+  IntColumn get runtime => integer().nullable()();
+  TextColumn get airDate => text().nullable()();
+  TextColumn get stillFile => text().nullable()();
 
   /// File no longer found on disk at last scan. Row kept to preserve data.
   BoolColumn get missing => boolean().withDefault(const Constant(false))();
@@ -43,13 +65,27 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
           if (from < 2) await m.addColumn(episodes, episodes.title);
+          if (from < 3) {
+            await m.addColumn(shows, shows.tmdbId);
+            await m.addColumn(shows, shows.tmdbName);
+            await m.addColumn(shows, shows.overview);
+            await m.addColumn(shows, shows.posterFile);
+            await m.addColumn(shows, shows.backdropFile);
+            await m.addColumn(shows, shows.metaStatus);
+            await m.addColumn(shows, shows.metaLocked);
+            await m.addColumn(episodes, episodes.tmdbTitle);
+            await m.addColumn(episodes, episodes.overview);
+            await m.addColumn(episodes, episodes.runtime);
+            await m.addColumn(episodes, episodes.airDate);
+            await m.addColumn(episodes, episodes.stillFile);
+          }
         },
       );
 
@@ -124,6 +160,9 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
   }
+
+  Stream<Show> watchShow(int id) =>
+      (select(shows)..where((s) => s.id.equals(id))).watchSingle();
 
   Future<void> _deleteEmptyShows() async {
     await customStatement(

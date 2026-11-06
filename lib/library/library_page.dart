@@ -1,16 +1,23 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../data/database.dart';
+import '../metadata/metadata_service.dart';
+import '../metadata/tmdb_client.dart';
 import '../player/player_page.dart';
 import 'filename_parser.dart';
 import 'scanner.dart';
 
 /// Sprint 2 library UI: simple lists. Netflix-style UI comes in Sprint 4.
 class LibraryPage extends StatefulWidget {
-  const LibraryPage({super.key, required this.db});
+  const LibraryPage({super.key, required this.db, this.meta});
   final AppDatabase db;
+
+  /// Null when no TMDB token is configured: library works without artwork.
+  final MetadataService? meta;
 
   @override
   State<LibraryPage> createState() => _LibraryPageState();
@@ -26,6 +33,7 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   AppDatabase get db => widget.db;
+  String? _metaNote;
 
   Future<void> _addFolder() async {
     final dir = await FilePicker.getDirectoryPath();
@@ -49,11 +57,36 @@ class _LibraryPageState extends State<LibraryPage> {
     } finally {
       if (mounted) setState(() => _scanning = false);
     }
+    await _syncMetadata();
     if (!quiet && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Scan done: $added new, $missing missing'
             '${offline > 0 ? ', $offline folder(s) unreachable' : ''}'),
       ));
+    }
+  }
+
+  Future<void> _syncMetadata() async {
+    final meta = widget.meta;
+    if (meta == null) {
+      if (mounted) {
+        setState(() => _metaNote =
+            'No TMDB token: add TMDB_READ_TOKEN to .env for posters and descriptions.');
+      }
+      return;
+    }
+    if (mounted) setState(() => _metaNote = 'Fetching metadata...');
+    try {
+      final r = await meta.syncAll();
+      if (mounted) {
+        setState(() => _metaNote = r.offline
+            ? 'Offline: showing cached metadata.'
+            : (r.ambiguous + r.noMatch > 0
+                ? '${r.ambiguous + r.noMatch} show(s) need a manual match (open the show, menu, Re-match).'
+                : null));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _metaNote = 'Metadata fetch failed.');
     }
   }
 
@@ -95,19 +128,48 @@ class _LibraryPageState extends State<LibraryPage> {
             Tab(text: 'Folders'),
           ]),
         ),
-        body: TabBarView(children: [
-          _ShowsTab(db: db),
-          _UnsortedTab(db: db),
-          _FoldersTab(db: db, onAdd: _addFolder),
+        body: Column(children: [
+          if (_metaNote != null)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFF1C1C24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Text(_metaNote!,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
+          Expanded(
+            child: TabBarView(children: [
+              _ShowsTab(db: db, meta: widget.meta),
+              _UnsortedTab(db: db),
+              _FoldersTab(db: db, onAdd: _addFolder),
+            ]),
+          ),
         ]),
       ),
     );
   }
 }
 
+Widget _poster(String? file, {double w = 48, double h = 72}) {
+  final f = file != null && File(file).existsSync() ? File(file) : null;
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(4),
+    child: SizedBox(
+      width: w,
+      height: h,
+      child: f != null
+          ? Image.file(f, fit: BoxFit.cover, cacheWidth: (w * 3).round())
+          : Container(
+              color: const Color(0xFF1C1C24),
+              child: const Icon(Icons.tv, color: Colors.white24)),
+    ),
+  );
+}
+
 class _ShowsTab extends StatelessWidget {
-  const _ShowsTab({required this.db});
+  const _ShowsTab({required this.db, required this.meta});
   final AppDatabase db;
+  final MetadataService? meta;
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +185,16 @@ class _ShowsTab extends StatelessWidget {
           children: [
             for (final s in shows)
               ListTile(
-                title: Text(s.show.name),
-                subtitle: Text('${s.episodeCount} episodes'),
+                leading: _poster(s.show.posterFile),
+                title: Text(s.show.tmdbName ?? s.show.name),
+                subtitle: Text(
+                    '${s.episodeCount} episodes${s.show.metaStatus == 'ambiguous' || s.show.metaStatus == 'nomatch' ? '  ·  needs match' : ''}'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => ShowPage(db: db, show: s.show)),
+                      builder: (_) =>
+                          ShowPage(db: db, meta: meta, showId: s.show.id)),
                 ),
               ),
           ],
@@ -140,48 +205,266 @@ class _ShowsTab extends StatelessWidget {
 }
 
 class ShowPage extends StatelessWidget {
-  const ShowPage({super.key, required this.db, required this.show});
+  const ShowPage(
+      {super.key, required this.db, required this.meta, required this.showId});
   final AppDatabase db;
+  final MetadataService? meta;
+  final int showId;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Show>(
+      stream: db.watchShow(showId),
+      builder: (context, showSnap) {
+        final show = showSnap.data;
+        if (show == null) return const Scaffold();
+        final title = show.tmdbName ?? show.name;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            actions: [
+              if (meta != null)
+                PopupMenuButton<String>(
+                  onSelected: (v) async {
+                    if (v == 'rematch') {
+                      await showDialog(
+                          context: context,
+                          builder: (_) =>
+                              _RematchDialog(meta: meta!, show: show));
+                    } else if (v == 'refresh') {
+                      try {
+                        await meta!.refresh(show.id);
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Refresh failed (offline?)')));
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'rematch', child: Text('Re-match...')),
+                    PopupMenuItem(
+                        value: 'refresh', child: Text('Refresh metadata')),
+                  ],
+                ),
+            ],
+          ),
+          body: StreamBuilder<List<Episode>>(
+            stream: db.watchEpisodesOfShow(showId),
+            builder: (context, snap) {
+              final eps = snap.data ?? const [];
+              int? lastSeason = -1;
+              final children = <Widget>[
+                _ShowHeader(show: show),
+              ];
+              for (final e in eps) {
+                if (e.season != lastSeason) {
+                  lastSeason = e.season;
+                  children.add(Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Text(
+                        e.season == 0 ? 'Specials' : 'Season ${e.season}',
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ));
+                }
+                final range = e.endEpisode != null
+                    ? 'E${e.episode}-${e.endEpisode}'
+                    : 'E${e.episode}';
+                final name = e.tmdbTitle ?? e.title;
+                final label = name == null ? range : '$range · $name';
+                children.add(ListTile(
+                  leading: _thumb(e.stillFile),
+                  title: Text(label),
+                  subtitle: Text(
+                    [
+                      if (e.runtime != null) '${e.runtime} min',
+                      if (e.overview != null) e.overview!,
+                      if (e.overview == null) p.basename(e.filePath),
+                    ].join('  ·  '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => PlayerPage(
+                            initialPath: e.filePath,
+                            title: '$title S${e.season} $label')),
+                  ),
+                ));
+              }
+              return ListView(children: children);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _thumb(String? file) {
+    final f = file != null && File(file).existsSync() ? File(file) : null;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        width: 120,
+        height: 68,
+        child: f != null
+            ? Image.file(f, fit: BoxFit.cover, cacheWidth: 360)
+            : Container(
+                color: const Color(0xFF1C1C24),
+                child: const Icon(Icons.play_arrow, color: Colors.white38)),
+      ),
+    );
+  }
+}
+
+class _ShowHeader extends StatelessWidget {
+  const _ShowHeader({required this.show});
   final Show show;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(show.name)),
-      body: StreamBuilder<List<Episode>>(
-        stream: db.watchEpisodesOfShow(show.id),
-        builder: (context, snap) {
-          final eps = snap.data ?? const [];
-          int? lastSeason = -1;
-          final children = <Widget>[];
-          for (final e in eps) {
-            if (e.season != lastSeason) {
-              lastSeason = e.season;
-              children.add(Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text('Season ${e.season}',
-                    style: Theme.of(context).textTheme.titleMedium),
-              ));
-            }
-            final range = e.endEpisode != null
-                ? 'E${e.episode}-${e.endEpisode}'
-                : 'E${e.episode}';
-            children.add(ListTile(
-              leading: const Icon(Icons.play_arrow),
-              title: Text(e.title == null ? range : '$range · ${e.title}'),
-              subtitle: Text(p.basename(e.filePath)),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => PlayerPage(
-                        initialPath: e.filePath,
-                        title: '${show.name} S${e.season} $range')),
-              ),
-            ));
-          }
-          return ListView(children: children);
-        },
+    final backdrop =
+        show.backdropFile != null && File(show.backdropFile!).existsSync()
+            ? File(show.backdropFile!)
+            : null;
+    return Stack(children: [
+      if (backdrop != null)
+        Positioned.fill(
+          child: Opacity(
+              opacity: 0.35,
+              child: Image.file(backdrop, fit: BoxFit.cover, cacheWidth: 1280)),
+        ),
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _poster(show.posterFile, w: 120, h: 180),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(show.tmdbName ?? show.name,
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 8),
+                  Text(
+                    show.overview ??
+                        (show.metaStatus == 'matched'
+                            ? 'No synopsis available.'
+                            : 'No metadata yet. Use the menu > Re-match to pick the right show.'),
+                    maxLines: 7,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ]),
+          ),
+        ]),
       ),
+    ]);
+  }
+}
+
+class _RematchDialog extends StatefulWidget {
+  const _RematchDialog({required this.meta, required this.show});
+  final MetadataService meta;
+  final Show show;
+
+  @override
+  State<_RematchDialog> createState() => _RematchDialogState();
+}
+
+class _RematchDialogState extends State<_RematchDialog> {
+  late final _query = TextEditingController(text: widget.show.name);
+  List<TmdbSearchResult>? _results;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _search();
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final r = await widget.meta.candidates(_query.text.trim());
+      if (mounted) setState(() => _results = r);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Search failed (offline?)');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pick(TmdbSearchResult r) async {
+    setState(() => _busy = true);
+    try {
+      await widget.meta.pickMatch(widget.show.id, r.id);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = 'Could not fetch that show (offline?)';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Pick the right show'),
+      content: SizedBox(
+        width: 520,
+        height: 420,
+        child: Column(children: [
+          TextField(
+            controller: _query,
+            decoration: InputDecoration(
+              labelText: 'Search TMDB',
+              suffixIcon: IconButton(
+                  icon: const Icon(Icons.search), onPressed: _search),
+            ),
+            onSubmitted: (_) => _search(),
+          ),
+          if (_busy) const LinearProgressIndicator(),
+          if (_error != null)
+            Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error))),
+          Expanded(
+            child: ListView(children: [
+              for (final r in _results ?? const <TmdbSearchResult>[])
+                ListTile(
+                  title:
+                      Text('${r.name}${r.year != null ? ' (${r.year})' : ''}'),
+                  subtitle: Text(r.overview ?? '',
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  onTap: _busy ? null : () => _pick(r),
+                ),
+            ]),
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close')),
+      ],
     );
   }
 }
