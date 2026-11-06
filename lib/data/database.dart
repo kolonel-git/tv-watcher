@@ -258,6 +258,17 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<Episode?> getEpisode(int id) =>
+      (select(episodes)..where((e) => e.id.equals(id))).getSingleOrNull();
+
+  Future<Show?> getShow(int id) =>
+      (select(shows)..where((s) => s.id.equals(id))).getSingleOrNull();
+
+  /// All present (not missing) episodes of a show, unordered.
+  Future<List<Episode>> episodesOfShow(int showId) => (select(episodes)
+        ..where((e) => e.showId.equals(showId) & e.missing.equals(false)))
+      .get();
+
   Stream<Show> watchShow(int id) =>
       (select(shows)..where((s) => s.id.equals(id))).watchSingle();
 

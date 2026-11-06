@@ -81,6 +81,15 @@ void main() {
       expect(nextInOrder(eps, eps[3]), isNull);
     });
     test('from a special is null', () => expect(nextInOrder(eps, eps[4]), isNull));
+    test('gaps in numbering: E1, E3 -> E3 follows E1', () {
+      final gap = [ep(1, 1, 1), ep(2, 1, 3), ep(3, 2, 2)];
+      expect(nextInOrder(gap, gap[0])!.id, 2);
+      expect(nextInOrder(gap, gap[1])!.id, 3); // S1E3 -> S2E2 (no S2E1)
+    });
+    test('multi-season rollover skips an empty season', () {
+      final eps2 = [ep(1, 1, 1), ep(2, 3, 1)];
+      expect(nextInOrder(eps2, eps2[0])!.id, 2);
+    });
     test('order independent of input order', () {
       final shuffled = [eps[3], eps[0], eps[2], eps[1]];
       expect(nextInOrder(shuffled, eps[1])!.id, 3);

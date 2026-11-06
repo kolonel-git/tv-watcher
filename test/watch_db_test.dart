@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_watcher/data/database.dart';
+import 'package:tv_watcher/watch/watch_logic.dart';
 
 void main() {
   late AppDatabase db;
@@ -78,6 +79,17 @@ void main() {
     await (db.update(db.episodes)..where((e) => e.id.equals(ids[0])))
         .write(const EpisodesCompanion(title: Value('New title')));
     expect((await ep(ids[0])).positionMs, 400000);
+  });
+
+  test('episodesOfShow excludes missing files, so autoplay skips them',
+      () async {
+    await (db.update(db.episodes)..where((e) => e.id.equals(ids[1])))
+        .write(const EpisodesCompanion(missing: Value(true)));
+    final list = await db.episodesOfShow(showId);
+    expect(list.map((e) => e.id), isNot(contains(ids[1])));
+    final current = list.firstWhere((e) => e.id == ids[0]);
+    final next = nextInOrder(list.map(episodeRef), episodeRef(current))!;
+    expect(next.id, ids[2]); // S1E1 -> S1E3, missing S1E2 skipped
   });
 
   group('continue watching stream', () {

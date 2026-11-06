@@ -13,15 +13,13 @@ Future<void> openEpisode(
   Episode e, {
   bool fromStart = false,
 }) {
-  final name = e.tmdbTitle ?? e.title;
   final resumeMs = fromStart ? 0 : resumePositionMs(e.positionMs, e.durationMs);
   return Navigator.push(
     context,
     MaterialPageRoute(
       builder: (_) => PlayerPage(
         initialPath: e.filePath,
-        title:
-            '${show.tmdbName ?? show.name}  S${e.season}E${e.episode}${name != null ? ' · $name' : ''}',
+        title: episodeTitle(show, e),
         db: db,
         episodeId: e.id,
         startAt: resumeMs > 0 ? Duration(milliseconds: resumeMs) : null,
@@ -37,4 +35,10 @@ String formatDurationMs(int ms) {
   final m = d.inMinutes.remainder(60);
   final s = d.inSeconds.remainder(60);
   return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+}
+
+/// Title line shown in the player: `Show  S1E3 \u00b7 Episode title`.
+String episodeTitle(Show show, Episode e) {
+  final name = e.tmdbTitle ?? e.title;
+  return '${show.tmdbName ?? show.name}  S${e.season}E${e.episode}${name != null ? ' \u00b7 $name' : ''}';
 }
