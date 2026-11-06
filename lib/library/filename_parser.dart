@@ -210,3 +210,94 @@ String? _title(String rest) {
   t = t.replaceAll(RegExp(r'\s+'), ' ');
   return t.isEmpty ? null : t;
 }
+
+/// A file numbered only by a bare episode number, e.g.
+/// `[Group] Show - Arc Name - 07 [480p].mkv` (anime-style, no season marker).
+class AbsoluteGuess {
+  const AbsoluteGuess({required this.groupLabel, required this.number});
+
+  /// Name part before the number, cleaned. Files sharing it form one group
+  /// (typically one season/arc).
+  final String groupLabel;
+  final int number;
+
+  String get groupKey => groupLabel.toLowerCase();
+}
+
+final _absolute = RegExp(
+  r'^(.*\S)\s*[-\u2013]\s*(\d{1,3})(?:v\d+)?(?:\s*[\[(].*)?$',
+);
+
+// "Show Name 07", "Show Name Episode 7", "Show Name Ep.07" (no dash).
+// The number must not directly follow another digit (so "Movie 2019" fails).
+final _trailing = RegExp(
+  r'^(.*?\S)(?:[\s._-]+(?:episode|ep|e)[\s._-]*|[\s._-]*)(?<!\d)(\d{1,3})(?:v\d+)?$',
+  caseSensitive: false,
+);
+
+AbsoluteGuess? parseAbsolutePath(String path) {
+  final base = p.basenameWithoutExtension(path.replaceAll('\\', '/'));
+  String rawLabel;
+  int n;
+  final m = _absolute.firstMatch(base);
+  if (m != null) {
+    rawLabel = m.group(1)!;
+    n = int.parse(m.group(2)!);
+  } else {
+    final stripped = base
+        .replaceAll(RegExp(r'\[[^\]]*\]|\([^)]*\)'), ' ')
+        .replaceAll(RegExp(r'[._]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final t = _trailing.firstMatch(stripped);
+    if (t == null) return null;
+    rawLabel = t.group(1)!;
+    n = int.parse(t.group(2)!);
+  }
+  if (n == 0) return null;
+  var label = rawLabel;
+  label = label.replaceFirst(RegExp(r'^\s*\[[^\]]*\]\s*'), ''); // [Group]
+  label = label.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
+  label = label.replaceFirst(RegExp(r'\s*\((?:19|20)\d{2}\)\s*$'), ''); // (2012)
+  label = label.replaceAll(RegExp(r'[._]+'), ' ');
+  label = label.replaceFirst(RegExp(r'^[\s-]+'), '');
+  label = label.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (label.isEmpty) return null;
+  return AbsoluteGuess(groupLabel: label, number: n);
+}
+
+final _genericFolder = RegExp(
+  r'^(watched|unwatched|extras?|specials?|season[ ._-]?\d+|s\d{1,2}|downloads?|tv|tv shows|shows|video|videos|media)$',
+  caseSensitive: false,
+);
+
+String? _cleanFolderName(String name) {
+  var n = name;
+  n = n.replaceAll(
+      RegExp(r'\((?:19|20)\d{2}(?:\s*-\s*(?:19|20)\d{2})?\)'), ' ');
+  n = n.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
+  n = n.replaceAll(
+      RegExp(r'\b(complete|collection|series|batch|bd|bluray)\b',
+          caseSensitive: false),
+      ' ');
+  n = n.replaceAll(RegExp(r'[._]+'), ' ');
+  n = n.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (n.isEmpty || _genericFolder.hasMatch(n)) return null;
+  return n;
+}
+
+/// Show name suggestion for an unsorted file: the first non-generic folder
+/// in its path (skipping "Watched", "Season 1", ...), else the library
+/// folder's own name ([rootName]) cleaned of "(2012-2016)", "Complete", etc.
+String? suggestShowNameFromFolder(String relativePath, {String? rootName}) {
+  final parts = relativePath
+      .replaceAll('\\', '/')
+      .split('/')
+      .where((s) => s.isNotEmpty)
+      .toList();
+  for (final dir in parts.take(parts.length - 1)) {
+    final c = _cleanFolderName(dir);
+    if (c != null) return c;
+  }
+  return rootName == null ? null : _cleanFolderName(rootName);
+}

@@ -1,7 +1,12 @@
-# Changelog
+﻿# Changelog
 
 ## Unreleased
+- Unsorted grouping: similar files grouped by name prefix (with or without a dash, 'Episode N', brackets ignored), leftovers grouped by folder and numbered by file order; expand a group to see files; tick several groups and assign them to one show+season; show name suggested from folder or library name. 106 tests.
+- Player polish: shorter control bar, rounded icons, red/yellow cone volume, Poppins font (bundled, OFL) app-wide.
+- Sprint 4 feedback: episode card / season dropdown spacing; player gets -10s/+10s buttons around play/pause and a VLC-style cone volume control (gradient fill, drag/click/mouse wheel); Unsorted groups anime-style numbered files (`Show - Arc - 07`) so a whole season is assigned at once (absolute numbering, replaces Sprint 2b). 93 tests.
+- Sprint 4: Netflix-style UI. Home poster grid (hover/focus scale, needs-match badge, empty state); show page with backdrop hero, synopsis, Play button, season dropdown, episode cards (still, title, runtime, overview); Unsorted/Folders moved to their own pages (app bar icons, unsorted count badge). 85 tests.
 - Sprint 3: TMDB metadata via Read Access Token (.env, gitignored; `.env.example` added). Auto-match by name (+year), manual Re-match dialog (locked against auto-rematch), show synopsis/poster/backdrop, episode titles/overviews/runtime/stills. Artwork cached under app support dir; works offline after first fetch. Language from `TMDB_LANGUAGE` (default en-US) with English fallback. Episode titles from filenames parsed. 80 tests.
 - Sprint 2: SQLite (drift) library DB; add/remove library folders; recursive read-only scan; filename parser (SxxExx, 1x01, Season N/Episode N, multi-episode, year, release tags); Unsorted tab with manual assign; rescan (new/missing, manual assignments preserved, unreachable folders skipped); simple Shows/Unsorted/Folders UI; 60 unit tests.
 - Sprint 1: Flutter Windows scaffold, media_kit player (open file, play/pause, seek, volume, mute, fullscreen, keyboard shortcuts), README.
 - Sprint 0: skeleton chosen (Flutter + media_kit). ROADMAP.md written.
+

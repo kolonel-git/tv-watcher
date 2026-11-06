@@ -7,6 +7,7 @@ ParsedEpisode e(String show, int s, int ep, {int? end, int? year}) =>
 
 void main() {
   titleTests();
+  absoluteTests();
   group('parses (path -> show/season/episode)', () {
     final cases = <String, ParsedEpisode>{
       // SxxExx variants
@@ -118,6 +119,45 @@ void titleTests() {
     };
     cases.forEach((path, title) {
       test(path, () => expect(parseEpisodePath(path)?.title, title));
+    });
+  });
+}
+
+void absoluteTests() {
+  group('absolute numbering', () {
+    test('DeadFish style', () {
+      final g = parseAbsolutePath(
+          r"D:\TV\JoJo\[DeadFish] JoJo no Kimyou na Bouken (2012) - 07 [BD][720p][AAC].mp4")!;
+      expect(g.groupLabel, 'JoJo no Kimyou na Bouken');
+      expect(g.number, 7);
+    });
+    test('HorribleSubs arc', () {
+      final g = parseAbsolutePath(
+          "[HorribleSubs] JoJo's Bizarre Adventure - Stardust Crusaders - 12 [480p].mkv")!;
+      expect(g.groupLabel, "JoJo's Bizarre Adventure - Stardust Crusaders");
+      expect(g.number, 12);
+    });
+    test('same arc shares group key', () {
+      final a = parseAbsolutePath('[X] Show - Arc - 01 [480p].mkv')!;
+      final b = parseAbsolutePath('[X] Show - Arc - 24 [480p].mkv')!;
+      expect(a.groupKey, b.groupKey);
+    });
+    test('version suffix and no tags', () {
+      final g = parseAbsolutePath('Show Name - 05v2.mkv')!;
+      expect(g.number, 5);
+      expect(g.groupLabel, 'Show Name');
+    });
+    test('not matched', () {
+      expect(parseAbsolutePath('Movie (2019) 1080p.mkv'), isNull);
+      expect(parseAbsolutePath('holiday.mp4'), isNull);
+      expect(parseAbsolutePath('Show - 2019.mkv'), isNull);
+    });
+    test('suggest show name from folder', () {
+      expect(
+          suggestShowNameFromFolder(
+              "JoJo's Bizarre Adventure Complete (2012-2016)/Watched/x - 01.mp4"),
+          "JoJo's Bizarre Adventure");
+      expect(suggestShowNameFromFolder('x - 01.mp4'), isNull);
     });
   });
 }

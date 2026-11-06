@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'config/env_config.dart';
 import 'data/database.dart';
-import 'library/library_page.dart';
+import 'ui/home_page.dart';
 import 'metadata/metadata_service.dart';
 import 'metadata/tmdb_client.dart';
 import 'dart:io';
@@ -35,14 +35,17 @@ class TvWatcherApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final base = ThemeData.dark(useMaterial3: true);
     return MaterialApp(
       title: 'TV Watcher',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true).copyWith(
+      theme: base.copyWith(
         scaffoldBackgroundColor: const Color(0xFF0B0B0F),
         colorScheme: const ColorScheme.dark(primary: Color(0xFFE50914)),
+        textTheme: base.textTheme.apply(fontFamily: 'Poppins'),
+        primaryTextTheme: base.primaryTextTheme.apply(fontFamily: 'Poppins'),
       ),
-      home: LibraryPage(db: db, meta: meta),
+      home: HomePage(db: db, meta: meta),
     );
   }
 }

@@ -58,7 +58,7 @@ Stories:
 - S2.5 Rescan: adds new, flags missing, keeps watch data. *AC:* idempotent.
 **Deliverable:** simple list UI of parsed library + Unsorted screen; tests green. Needs from you: sample filenames / test folder.
 
-### Sprint 2b — Anime absolute numbering (small)
+### Sprint 2b — Anime absolute numbering (small) — PARTLY DONE: bulk 'Assign group' in Unsorted; TMDB episode-group auto-mapping still open
 - S2b.1 Parse `Show - 137`, `[Group] Show - 137 [1080p]`. *AC:* tests.
 - S2b.2 Map absolute → season/episode using TMDB episode groups where available; else Unsorted.
 
@@ -75,7 +75,7 @@ Stories:
 ### Sprint 4 — Netflix-style browsing
 **Goal:** the real UI.
 Stories:
-- S4.1 Home: Continue Watching row + poster grid of all shows.
+- S4.1 Home: poster grid of all shows. (Continue Watching row moved to Sprint 5: needs watch-progress data.) DONE
 - S4.2 Show page: backdrop, synopsis, season selector, episode cards (thumb, title, description, runtime).
 - S4.3 Click episode → player; back returns to same scroll position.
 - S4.4 Dark theme, hover effects, keyboard-friendly focus.
@@ -86,6 +86,7 @@ Stories:
 - S5.1 Save position every ~5s and on exit/pause; resume at exact timestamp. *AC:* kill app mid-play, reopen, resumes within 5s.
 - S5.2 Watched = ≥ 90% (configurable) or manual. Progress bar on cards; watched check.
 - S5.3 Mark episode/season/show watched/unwatched.
+- S5.0 Home Continue Watching row UI (moved from Sprint 4), fed by watch progress.
 - S5.4 Continue Watching: resumes the right episode (in-progress, else next unwatched). Unit tests for resume + next-episode logic.
 **Deliverable:** close and reopen; Continue Watching correct.
 

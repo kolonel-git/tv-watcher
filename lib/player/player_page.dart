@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
+import 'cone_volume.dart';
+
 /// Sprint 1 player: open a file, standard controls, keyboard shortcuts.
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key, this.initialPath, this.title});
@@ -200,6 +202,7 @@ class _PlayerPageState extends State<PlayerPage> {
                         onOpen: _openFile,
                         onToggleMute: _toggleMute,
                         onVolume: _setVolume,
+                        onSeekBy: _seekBy,
                         onFullscreen: () => _setFullscreen(!_fullscreen),
                       ),
                     ),
@@ -220,6 +223,7 @@ class _ControlBar extends StatelessWidget {
     required this.onOpen,
     required this.onToggleMute,
     required this.onVolume,
+    required this.onSeekBy,
     required this.onFullscreen,
   });
 
@@ -228,6 +232,7 @@ class _ControlBar extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onToggleMute;
   final ValueChanged<double> onVolume;
+  final ValueChanged<Duration> onSeekBy;
   final VoidCallback onFullscreen;
 
   static String _fmt(Duration d) {
@@ -238,59 +243,100 @@ class _ControlBar extends StatelessWidget {
     return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
   }
 
+  static final _btnStyle = IconButton.styleFrom(
+    padding: const EdgeInsets.all(4),
+    minimumSize: const Size(36, 36),
+    visualDensity: VisualDensity.compact,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final timeStyle = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(fontWeight: FontWeight.w500, color: Colors.white70);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Color(0xCC000000)],
+          colors: [Colors.transparent, Color(0xDD000000)],
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          StreamBuilder<Duration>(
-            stream: player.stream.position,
-            builder: (context, pos) => StreamBuilder<Duration>(
-              stream: player.stream.duration,
-              builder: (context, dur) {
-                final position = pos.data ?? player.state.position;
-                final duration = dur.data ?? player.state.duration;
-                final max = duration.inMilliseconds.toDouble();
-                return Row(
-                  children: [
-                    Text(_fmt(position)),
-                    Expanded(
-                      child: Slider(
-                        value: position.inMilliseconds
-                            .toDouble()
-                            .clamp(0, max > 0 ? max : 1),
-                        max: max > 0 ? max : 1,
-                        onChanged: (v) =>
-                            player.seek(Duration(milliseconds: v.round())),
-                      ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              activeTrackColor: _red,
+              inactiveTrackColor: Colors.white24,
+              thumbColor: _red,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 11),
+              trackShape: const RoundedRectSliderTrackShape(),
+            ),
+            child: StreamBuilder<Duration>(
+              stream: player.stream.position,
+              builder: (context, pos) => StreamBuilder<Duration>(
+                stream: player.stream.duration,
+                builder: (context, dur) {
+                  final position = pos.data ?? player.state.position;
+                  final duration = dur.data ?? player.state.duration;
+                  final max = duration.inMilliseconds.toDouble();
+                  return SizedBox(
+                    height: 24,
+                    child: Row(
+                      children: [
+                        Text(_fmt(position), style: timeStyle),
+                        Expanded(
+                          child: Slider(
+                            value: position.inMilliseconds
+                                .toDouble()
+                                .clamp(0, max > 0 ? max : 1),
+                            max: max > 0 ? max : 1,
+                            onChanged: (v) => player
+                                .seek(Duration(milliseconds: v.round())),
+                          ),
+                        ),
+                        Text(_fmt(duration), style: timeStyle),
+                      ],
                     ),
-                    Text(_fmt(duration)),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
           Row(
             children: [
+              IconButton(
+                style: _btnStyle,
+                tooltip: 'Back 10s (←)',
+                iconSize: 26,
+                icon: const Icon(Icons.replay_10_rounded),
+                onPressed: () => onSeekBy(const Duration(seconds: -10)),
+              ),
               StreamBuilder<bool>(
                 stream: player.stream.playing,
                 builder: (context, snap) => IconButton(
-                  iconSize: 32,
+                  style: _btnStyle,
+                  tooltip: 'Play / pause (Space)',
+                  iconSize: 34,
                   icon: Icon((snap.data ?? false)
-                      ? Icons.pause
-                      : Icons.play_arrow),
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded),
                   onPressed: player.playOrPause,
                 ),
               ),
+              IconButton(
+                style: _btnStyle,
+                tooltip: 'Forward 10s (→)',
+                iconSize: 26,
+                icon: const Icon(Icons.forward_10_rounded),
+                onPressed: () => onSeekBy(const Duration(seconds: 10)),
+              ),
+              const SizedBox(width: 10),
               StreamBuilder<double>(
                 stream: player.stream.volume,
                 builder: (context, snap) {
@@ -298,27 +344,36 @@ class _ControlBar extends StatelessWidget {
                   return Row(
                     children: [
                       IconButton(
-                        icon: Icon(v == 0 ? Icons.volume_off : Icons.volume_up),
+                        style: _btnStyle,
+                        tooltip: 'Mute (M)',
+                        iconSize: 24,
+                        icon: Icon(v == 0
+                            ? Icons.volume_off_rounded
+                            : Icons.volume_up_rounded),
                         onPressed: onToggleMute,
                       ),
-                      SizedBox(
-                        width: 120,
-                        child: Slider(value: v, max: 100, onChanged: onVolume),
-                      ),
+                      const SizedBox(width: 4),
+                      ConeVolumeSlider(
+                          value: v, onChanged: onVolume, width: 100, height: 22),
                     ],
                   );
                 },
               ),
               const Spacer(),
               IconButton(
+                style: _btnStyle,
                 tooltip: 'Open file (O)',
-                icon: const Icon(Icons.folder_open),
+                iconSize: 24,
+                icon: const Icon(Icons.folder_open_rounded),
                 onPressed: onOpen,
               ),
               IconButton(
+                style: _btnStyle,
                 tooltip: 'Fullscreen (F)',
-                icon: Icon(
-                    fullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+                iconSize: 26,
+                icon: Icon(fullscreen
+                    ? Icons.fullscreen_exit_rounded
+                    : Icons.fullscreen_rounded),
                 onPressed: onFullscreen,
               ),
             ],
@@ -328,3 +383,5 @@ class _ControlBar extends StatelessWidget {
     );
   }
 }
+
+const _red = Color(0xFFE50914);
