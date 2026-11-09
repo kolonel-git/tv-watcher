@@ -84,18 +84,22 @@ UnsortedGrouping groupUnsorted(List<UnsortedItem> items) {
 
   for (final it in items) {
     final guess = parseAbsolutePath(it.relativePath);
-    final hint =
-        suggestShowNameFromFolder(it.relativePath, rootName: it.rootName);
+    final hint = suggestShowNameFromFolder(
+      it.relativePath,
+      rootName: it.rootName,
+    );
     if (guess != null) {
       final key = '${it.folderId}|n|${guess.groupKey}';
       byKey
           .putIfAbsent(
-              key,
-              () => UnsortedGroup(
-                  key: key,
-                  label: guess.groupLabel,
-                  numberedByName: true,
-                  showHint: hint))
+            key,
+            () => UnsortedGroup(
+              key: key,
+              label: guess.groupLabel,
+              numberedByName: true,
+              showHint: hint,
+            ),
+          )
           .entries
           .add(GroupEntry(it, guess.number));
     } else {
@@ -104,12 +108,14 @@ UnsortedGrouping groupUnsorted(List<UnsortedItem> items) {
       final label = dir == '.' ? '(library root)' : dir;
       byKey
           .putIfAbsent(
-              key,
-              () => UnsortedGroup(
-                  key: key,
-                  label: label,
-                  numberedByName: false,
-                  showHint: hint))
+            key,
+            () => UnsortedGroup(
+              key: key,
+              label: label,
+              numberedByName: false,
+              showHint: hint,
+            ),
+          )
           .entries
           .add(GroupEntry(it, 0));
     }
@@ -126,7 +132,8 @@ UnsortedGrouping groupUnsorted(List<UnsortedItem> items) {
       g.entries.sort((a, b) => a.number.compareTo(b.number));
     } else {
       g.entries.sort(
-          (a, b) => naturalCompare(a.item.relativePath, b.item.relativePath));
+        (a, b) => naturalCompare(a.item.relativePath, b.item.relativePath),
+      );
       for (var i = 0; i < g.entries.length; i++) {
         g.entries[i] = GroupEntry(g.entries[i].item, i + 1);
       }

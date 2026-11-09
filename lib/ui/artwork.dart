@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
+
 /// Returns the cached artwork file if it exists on disk.
 File? artworkFile(String? path) {
   if (path == null) return null;
@@ -30,25 +32,29 @@ class ArtworkImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final f = artworkFile(path);
     if (f != null) {
-      return Image.file(f, fit: fit, cacheWidth: cacheWidth,
-          errorBuilder: (_, _, _) => _placeholder(context));
+      return Image.file(
+        f,
+        fit: fit,
+        cacheWidth: cacheWidth,
+        errorBuilder: (_, _, _) => _placeholder(context),
+      );
     }
     return _placeholder(context);
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        color: const Color(0xFF1C1C24),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(8),
-        child: placeholderLabel != null
-            ? Text(placeholderLabel!,
-                textAlign: TextAlign.center,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(color: Colors.white54))
-            : Icon(placeholderIcon, color: Colors.white24, size: 32),
-      );
+    color: Ui.surface,
+    alignment: Alignment.center,
+    padding: const EdgeInsets.all(8),
+    child: placeholderLabel != null
+        ? Text(
+            placeholderLabel!,
+            textAlign: TextAlign.center,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(color: Ui.dim),
+          )
+        : Icon(placeholderIcon, color: Colors.white24, size: 32),
+  );
 }

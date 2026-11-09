@@ -97,13 +97,6 @@ Stories:
 - S6.3 Handle gaps (missing episodes) and specials (season 0 skipped by default).
 **Deliverable:** binge a season boundary hands-free.
 
-### Sprint 7 — Skip intro / credits
-Stories:
-- S7.1 Use chapter markers (names like Intro/Opening/Credits/Ending) → Skip button.
-- S7.2 Manual markers per show or season ("set intro start/end from current time"). *AC:* applies to all episodes in scope.
-- S7.3 Skip Credits jumps to next episode (or ends).
-**Deliverable:** skip buttons appear on correct ranges.
-
 ### Sprint 8 — Subtitles & audio tracks
 Stories:
 - S8.1 List embedded + external (.srt/.ass alongside file) subtitle tracks; select/off.
@@ -111,11 +104,36 @@ Stories:
 - S8.3 Remember per show (language/title match across episodes). *AC:* next episode auto-picks same.
 **Deliverable:** pick once, persists across episodes.
 
-### Sprint 9 — Polish & packaging
-- Settings screen, error states (missing file, no network), loading skeletons.
-- Perf pass, window state memory.
-- `flutter build windows` portable zip; optional installer.
-- Docs final.
+### Sprint 9 — Polish & packaging (expanded by product owner; split into 9a / 9b / 9c)
+**9a — Library management & undo** *(first)*
+- Multi-select episodes (checkbox mode; Shift = range, Ctrl-click or long-press enters it): mark watched/unwatched, clear/re-fetch metadata, move to Unsorted, select season/all.
+- Undo (snackbar) for bulk watched changes, mark-previous-watched, clear metadata, move to Unsorted.
+- 'Mark all previous episodes watched' per episode. 'Move to Unsorted' (undo a wrong assignment). 'Hide watched' filter on the show page.
+
+**9b — Settings & player options**
+- Settings screen (persisted in DB): autoplay on/off, lead time and countdown length; skip step (±N s); control-bar hide delay; watched threshold; resume behaviour (always / ask / restart); default volume mode; metadata language (overrides .env); home sort (A–Z, recently added, recently watched); poster size; show/hide specials; show missing files; reset all settings.
+- Player: playback speed ([ ] keys), subtitle delay (Z/X), audio delay, aspect ratio, hardware-decoding toggle, keyboard-shortcut help (?).
+- Data: export/import watch progress and settings (JSON backup), open data folder, About/version.
+
+**9c — Robustness & packaging**
+- Error states: missing/moved file (offer rescan), unreachable folder, no network/token; loading placeholders.
+- Window size/position memory; perf pass with a large library; image cache cap.
+- `flutter build windows --release` portable zip + install note; final docs.
+
+### Sprint 10 (was Sprint 7, deferred by product owner) — Skip intro / credits
+Stories:
+- S7.1 Use chapter markers (names like Intro/Opening/Credits/Ending) → Skip button.
+- S7.2 Manual markers per show or season ("set intro start/end from current time"). *AC:* applies to all episodes in scope.
+- S7.3 Skip Credits jumps to next episode (or ends).
+**Deliverable:** skip buttons appear on correct ranges.
+
+### Sprint 11 (planned, after all core functionality) — UI revamp
+Visual and interaction redesign of the whole app once the feature set is complete: home, show page, player chrome (control bar, menus, settings panels), Unsorted/Folders, consistent spacing/typography/motion. Scope and direction to be agreed with the product owner at planning (mockups first).
+
+## Known bugs (parked for later rework)
+- **KB-1 Picture-based embedded subtitles do not display** (e.g. Rick and Morty S01, Blu-ray `hdmv_pgs_subtitle`, track 'English (SDH)'; they work in VLC; text subtitles such as Community work). Parked by product owner; rework later.
+  - Findings: the track is listed and shows ticked in the menu, but mpv itself reports `sid=no` (track not actually selected), also when `sid` is set to 1 directly through the libmpv property; `sub-visibility=yes`, libass on. So rendering is not the problem; mpv is not selecting/opening the PGS stream (possible causes: PGS decoder missing from the bundled libmpv build, or the media_kit track id vs mpv id mismatch). Tried: libass on, runtime `sub-visibility` toggle, `sub-pos` nudge.
+  - Next steps: check mpv log output (`Player(configuration: PlayerConfiguration(logLevel: ...))`, `player.stream.log`) while selecting the track; compare with the `mpv.exe` build; try a newer libmpv build; as a fallback, offer OCR-free alternative such as 'Load subtitle file' or extracting to SRT outside the app (media files must never be modified).
 
 ## Backlog / maybe
 - Hardware-decoding toggle, playback speed, thumbnails on seek bar, file watcher for auto-rescan, installer.

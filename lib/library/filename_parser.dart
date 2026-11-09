@@ -48,8 +48,18 @@ class ParsedEpisode {
 }
 
 const videoExtensions = {
-  '.mkv', '.mp4', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.ts',
-  '.m2ts', '.mpg', '.mpeg',
+  '.mkv',
+  '.mp4',
+  '.avi',
+  '.mov',
+  '.wmv',
+  '.m4v',
+  '.webm',
+  '.flv',
+  '.ts',
+  '.m2ts',
+  '.mpg',
+  '.mpeg',
 };
 
 bool isVideoFile(String path) =>
@@ -258,7 +268,10 @@ AbsoluteGuess? parseAbsolutePath(String path) {
   var label = rawLabel;
   label = label.replaceFirst(RegExp(r'^\s*\[[^\]]*\]\s*'), ''); // [Group]
   label = label.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
-  label = label.replaceFirst(RegExp(r'\s*\((?:19|20)\d{2}\)\s*$'), ''); // (2012)
+  label = label.replaceFirst(
+    RegExp(r'\s*\((?:19|20)\d{2}\)\s*$'),
+    '',
+  ); // (2012)
   label = label.replaceAll(RegExp(r'[._]+'), ' ');
   label = label.replaceFirst(RegExp(r'^[\s-]+'), '');
   label = label.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -274,12 +287,17 @@ final _genericFolder = RegExp(
 String? _cleanFolderName(String name) {
   var n = name;
   n = n.replaceAll(
-      RegExp(r'\((?:19|20)\d{2}(?:\s*-\s*(?:19|20)\d{2})?\)'), ' ');
+    RegExp(r'\((?:19|20)\d{2}(?:\s*-\s*(?:19|20)\d{2})?\)'),
+    ' ',
+  );
   n = n.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
   n = n.replaceAll(
-      RegExp(r'\b(complete|collection|series|batch|bd|bluray)\b',
-          caseSensitive: false),
-      ' ');
+    RegExp(
+      r'\b(complete|collection|series|batch|bd|bluray)\b',
+      caseSensitive: false,
+    ),
+    ' ',
+  );
   n = n.replaceAll(RegExp(r'[._]+'), ' ');
   n = n.replaceAll(RegExp(r'\s+'), ' ').trim();
   if (n.isEmpty || _genericFolder.hasMatch(n)) return null;

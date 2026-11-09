@@ -22,27 +22,39 @@ void main() {
   late int folderId;
 
   setUp(() async {
-    db = AppDatabase.forTesting(DatabaseConnection(NativeDatabase.memory(),
-        closeStreamsSynchronously: true));
+    db = AppDatabase.forTesting(
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
+    );
     folderId = await db.addFolder(r'C:\media');
   });
   tearDown(() => db.close());
 
-  Future<int> addShow(String name, Map<int, List<String?>> seasons,
-      {String status = 'matched'}) async {
+  Future<int> addShow(
+    String name,
+    Map<int, List<String?>> seasons, {
+    String status = 'matched',
+  }) async {
     final id = await db.upsertShow(name, name.toLowerCase(), null);
-    await (db.update(db.shows)..where((s) => s.id.equals(id)))
-        .write(ShowsCompanion(metaStatus: Value(status)));
+    await (db.update(db.shows)..where((s) => s.id.equals(id))).write(
+      ShowsCompanion(metaStatus: Value(status)),
+    );
     for (final entry in seasons.entries) {
       for (var i = 0; i < entry.value.length; i++) {
-        await db.into(db.episodes).insert(EpisodesCompanion.insert(
-              filePath: '$name-${entry.key}-$i.mkv',
-              folderId: folderId,
-              showId: Value(id),
-              season: Value(entry.key),
-              episode: Value(i + 1),
-              tmdbTitle: Value(entry.value[i]),
-            ));
+        await db
+            .into(db.episodes)
+            .insert(
+              EpisodesCompanion.insert(
+                filePath: '$name-${entry.key}-$i.mkv',
+                folderId: folderId,
+                showId: Value(id),
+                season: Value(entry.key),
+                episode: Value(i + 1),
+                tmdbTitle: Value(entry.value[i]),
+              ),
+            );
       }
     }
     return id;
@@ -63,14 +75,15 @@ void main() {
     expect(find.text('Your library is empty'), findsOneWidget);
   });
 
-  testWidgets('home shows a poster card per show and opens the show page',
-      (t) async {
+  testWidgets('home shows a poster card per show and opens the show page', (
+    t,
+  ) async {
     bigScreen(t);
     await addShow('Alpha', {
-      1: ['Pilot', 'Second']
+      1: ['Pilot', 'Second'],
     });
     await addShow('Beta', {
-      1: ['One']
+      1: ['One'],
     }, status: 'ambiguous');
     await t.pumpWidget(app(HomePage(db: db)));
     await settle(t);
@@ -98,9 +111,7 @@ void main() {
     expect(find.text('S2 Ep1'), findsNothing);
     expect(find.text('Play S1E1'), findsOneWidget);
 
-    await t.tap(find.text('Season 1'));
-    await settle(t);
-    await t.tap(find.text('Season 2').last);
+    await t.tap(find.text('Season 2'));
     await settle(t);
 
     expect(find.text('S2 Ep1'), findsOneWidget);
@@ -109,8 +120,9 @@ void main() {
     expect(find.text('Play S2E1'), findsOneWidget);
   });
 
-  testWidgets('show page defaults to first real season, not specials',
-      (t) async {
+  testWidgets('show page defaults to first real season, not specials', (
+    t,
+  ) async {
     final id = await addShow('Delta', {
       0: ['Special'],
       1: ['Real'],
@@ -121,16 +133,30 @@ void main() {
     expect(find.text('Special'), findsNothing);
   });
 
-  testWidgets('unsorted: groups similar files and assigns a group at once',
-      (t) async {
+  testWidgets('unsorted: groups similar files and assigns a group at once', (
+    t,
+  ) async {
     bigScreen(t);
     for (var n = 1; n <= 3; n++) {
-      await db.into(db.episodes).insert(EpisodesCompanion.insert(
-          filePath: r'C:\media\[G] My Anime - Arc A - 0' '$n [480p].mkv',
-          folderId: folderId));
+      await db
+          .into(db.episodes)
+          .insert(
+            EpisodesCompanion.insert(
+              filePath:
+                  r'C:\media\[G] My Anime - Arc A - 0'
+                  '$n [480p].mkv',
+              folderId: folderId,
+            ),
+          );
     }
-    await db.into(db.episodes).insert(EpisodesCompanion.insert(
-        filePath: r'C:\media\random.mkv', folderId: folderId));
+    await db
+        .into(db.episodes)
+        .insert(
+          EpisodesCompanion.insert(
+            filePath: r'C:\media\random.mkv',
+            folderId: folderId,
+          ),
+        );
 
     await t.pumpWidget(app(UnsortedPage(db: db)));
     await settle(t);
@@ -147,19 +173,20 @@ void main() {
     await t.tap(find.text('Assign all'));
     await settle(t);
 
-    final rows = (await t.runAsync(() => (db.select(db.episodes)
-              ..where((e) => e.showId.isNotNull()))
-            .get()))!;
+    final rows = (await t.runAsync(
+      () => (db.select(db.episodes)..where((e) => e.showId.isNotNull())).get(),
+    ))!;
     expect(rows.length, 3);
     expect(rows.every((e) => e.season == 2), isTrue);
     expect(rows.map((e) => e.episode).toSet(), {1, 2, 3});
   });
 
-  testWidgets('home: continue watching row resumes at saved position',
-      (t) async {
+  testWidgets('home: continue watching row resumes at saved position', (
+    t,
+  ) async {
     bigScreen(t);
     final id = await addShow('Epsilon', {
-      1: ['Pilot', 'Second']
+      1: ['Pilot', 'Second'],
     });
     final eps = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
     await db.saveProgress(eps[1].id, positionMs: 754000, durationMs: 1500000);
@@ -176,18 +203,19 @@ void main() {
   testWidgets('home: no continue row before anything is played', (t) async {
     bigScreen(t);
     await addShow('Zeta', {
-      1: ['One']
+      1: ['One'],
     });
     await t.pumpWidget(app(HomePage(db: db)));
     await settle(t);
     expect(find.text('Continue watching'), findsNothing);
   });
 
-  testWidgets('show page: resume button, progress bar, watched check',
-      (t) async {
+  testWidgets('show page: resume button, progress bar, watched check', (
+    t,
+  ) async {
     bigScreen(t);
     final id = await addShow('Eta', {
-      1: ['One', 'Two', 'Three']
+      1: ['One', 'Two', 'Three'],
     });
     final eps = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
     await db.saveProgress(eps[0].id, positionMs: 990000, durationMs: 1000000);
@@ -197,14 +225,14 @@ void main() {
     await settle(t);
 
     expect(find.text('Resume S1E2'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(2));
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
   testWidgets('show page: mark season watched via menu', (t) async {
     bigScreen(t);
     final id = await addShow('Theta', {
-      1: ['One', 'Two']
+      1: ['One', 'Two'],
     });
     await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
     await settle(t);
@@ -216,29 +244,183 @@ void main() {
 
     final rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
     expect(rows.every((e) => e.watched), isTrue);
-    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(2));
+    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(4));
   });
 
-  testWidgets('show page: toggle one episode watched via its menu', (t) async {
+  testWidgets('show page: toggle one episode watched inline', (t) async {
     bigScreen(t);
     final id = await addShow('Iota', {
-      1: ['One', 'Two']
+      1: ['One', 'Two'],
     });
     await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
     await settle(t);
 
-    await t.tap(find.byTooltip('Episode actions').first);
-    await settle(t);
-    await t.tap(find.text('Mark watched'));
+    await t.tap(find.byTooltip('Mark watched').first);
     await settle(t);
 
     final rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
     expect(rows.where((e) => e.watched).length, 1);
   });
 
+  testWidgets('show page: multi-select marks watched, undo restores', (
+    t,
+  ) async {
+    bigScreen(t);
+    final id = await addShow('Kappa', {
+      1: ['One', 'Two', 'Three'],
+    });
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    await t.tap(find.byTooltip('Episode actions').first);
+    await settle(t);
+    await t.tap(find.text('Select').last);
+    await settle(t);
+    expect(find.text('1 selected'), findsOneWidget);
+
+    await t.tap(find.text('Select all'));
+    await settle(t);
+    expect(find.text('3 selected'), findsOneWidget);
+
+    await t.tap(find.text('Watched'));
+    await settle(t);
+    var rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    expect(rows.every((e) => e.watched), isTrue);
+    expect(find.text('Marked 3 episodes watched'), findsOneWidget);
+    expect(find.text('1 selected'), findsNothing); // select mode closed
+
+    await t.tap(find.text('Undo'));
+    await settle(t);
+    rows = (await t.runAsync(() => db.watchEpisodesOfShow(id).first))!;
+    expect(rows.any((e) => e.watched), isFalse);
+  });
+
+  testWidgets('show page: move episode to Unsorted via its menu', (t) async {
+    bigScreen(t);
+    final id = await addShow('Lambda', {
+      1: ['One', 'Two'],
+    });
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    await t.tap(find.byTooltip('Episode actions').first);
+    await settle(t);
+    await t.tap(find.text('Move to Unsorted'));
+    await settle(t);
+
+    final unsorted = (await t.runAsync(() => db.watchUnsorted().first))!;
+    expect(unsorted.length, 1);
+  });
+
   test('defaultSeason picks first non-zero season', () {
     expect(defaultSeason([0, 1, 2]), 1);
     expect(defaultSeason([0]), 0);
     expect(defaultSeason([2, 3]), 2);
+  });
+
+  testWidgets('show page: header Select button enters select mode', (t) async {
+    bigScreen(t);
+    final id = await addShow('Mu', {
+      1: ['One', 'Two'],
+    });
+    await t.pumpWidget(app(ShowPage(db: db, meta: null, showId: id)));
+    await settle(t);
+
+    await t.tap(find.text('Select'));
+    await settle(t);
+    expect(find.text('0 selected'), findsOneWidget);
+    // The bar must not swallow the list (it once grew to full height):
+    // the episodes stay visible, above the bar.
+    expect(find.text('One'), findsOneWidget);
+    expect(
+      t.getTopLeft(find.text('One')).dy,
+      lessThan(t.getTopLeft(find.text('0 selected')).dy),
+    );
+    await t.tap(find.text('Done'));
+    await settle(t);
+    expect(find.text('0 selected'), findsNothing);
+  });
+
+  group('home filter and sort', () {
+    ShowWithCount sw(int id, String name, int n) => ShowWithCount(
+      Show(
+        id: id,
+        name: name,
+        key: name.toLowerCase(),
+        year: null,
+        tmdbId: null,
+        tmdbName: null,
+        overview: null,
+        posterFile: null,
+        backdropFile: null,
+        metaStatus: 'none',
+        metaLocked: false,
+      ),
+      n,
+    );
+    final shows = [sw(1, 'Beta', 5), sw(2, 'alpha', 20), sw(3, 'Gamma', 5)];
+
+    test('name sort is case-insensitive', () {
+      expect(
+        filterAndSortShows(shows, '', ShowSort.name).map((s) => s.show.name),
+        ['alpha', 'Beta', 'Gamma'],
+      );
+      expect(
+        filterAndSortShows(
+          shows,
+          '',
+          ShowSort.nameDesc,
+        ).map((s) => s.show.name),
+        ['Gamma', 'Beta', 'alpha'],
+      );
+    });
+
+    test('most episodes, ties by name', () {
+      expect(
+        filterAndSortShows(
+          shows,
+          '',
+          ShowSort.episodes,
+        ).map((s) => s.show.name),
+        ['alpha', 'Beta', 'Gamma'],
+      );
+    });
+
+    test('search filters by substring, ignoring case and spaces at ends', () {
+      expect(
+        filterAndSortShows(
+          shows,
+          '  ET ',
+          ShowSort.name,
+        ).map((s) => s.show.name),
+        ['Beta'],
+      );
+      expect(filterAndSortShows(shows, 'zzz', ShowSort.name), isEmpty);
+    });
+  });
+
+  testWidgets('home: search narrows the grid and shows an empty result', (
+    t,
+  ) async {
+    bigScreen(t);
+    await addShow('Alpha Show', {
+      1: ['x'],
+    });
+    await addShow('Bravo Show', {
+      1: ['y'],
+    });
+    await t.pumpWidget(app(HomePage(db: db, meta: null)));
+    await settle(t);
+    expect(find.text('Alpha Show'), findsWidgets);
+    expect(find.text('Bravo Show'), findsWidgets);
+
+    await t.enterText(find.byType(TextField), 'bravo');
+    await settle(t);
+    expect(find.text('Alpha Show'), findsNothing);
+    expect(find.text('Bravo Show'), findsWidgets);
+
+    await t.enterText(find.byType(TextField), 'qqq');
+    await settle(t);
+    expect(find.textContaining('No shows match'), findsOneWidget);
   });
 }

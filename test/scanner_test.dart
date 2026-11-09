@@ -16,10 +16,10 @@ void main() {
   tearDown(() => db.close());
 
   Future<ScanResult> scan(List<String> rel) => scanFolder(
-        db,
-        folder,
-        listFiles: (_) async => [for (final r in rel) '$root\\$r'],
-      );
+    db,
+    folder,
+    listFiles: (_) async => [for (final r in rel) '$root\\$r'],
+  );
 
   test('groups files into shows and unsorted', () async {
     final r = await scan([
@@ -31,8 +31,10 @@ void main() {
     expect(r.added, 4);
     expect(r.unsorted, 1);
     final shows = await db.watchShows().first;
-    expect(shows.map((s) => s.show.name).toList(),
-        ['Breaking Bad', 'The Office US']);
+    expect(shows.map((s) => s.show.name).toList(), [
+      'Breaking Bad',
+      'The Office US',
+    ]);
     expect(shows.first.episodeCount, 2);
   });
 
@@ -66,8 +68,13 @@ void main() {
     await scan([r'holiday.mp4']);
     final ep = (await db.select(db.episodes).get()).single;
     expect(ep.showId, isNull);
-    await db.assignEpisode(ep.id,
-        showName: 'Holiday Show', showKey: 'holidayshow', season: 1, episode: 4);
+    await db.assignEpisode(
+      ep.id,
+      showName: 'Holiday Show',
+      showKey: 'holidayshow',
+      season: 1,
+      episode: 4,
+    );
 
     await scan([r'holiday.mp4']);
     final after = (await db.select(db.episodes).get()).single;
@@ -81,8 +88,13 @@ void main() {
     await scan([r'a.mkv', r'b.mkv']);
     expect((await db.watchUnsorted().first).length, 2);
     final first = (await db.watchUnsorted().first).first;
-    await db.assignEpisode(first.id,
-        showName: 'X', showKey: 'x', season: 1, episode: 1);
+    await db.assignEpisode(
+      first.id,
+      showName: 'X',
+      showKey: 'x',
+      season: 1,
+      episode: 1,
+    );
     expect((await db.watchUnsorted().first).length, 1);
   });
 

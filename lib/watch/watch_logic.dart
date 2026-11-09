@@ -125,7 +125,10 @@ ContinueTarget? continueTarget(Iterable<EpRef> episodes) {
     });
     final e = inProgress.last;
     return ContinueTarget(
-        e, resumePositionMs(e.positionMs, e.durationMs), e.lastPlayedAt ?? epoch);
+      e,
+      resumePositionMs(e.positionMs, e.durationMs),
+      e.lastPlayedAt ?? epoch,
+    );
   }
 
   final watched = all.where((e) => e.watched).toList();

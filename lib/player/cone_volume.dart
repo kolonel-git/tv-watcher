@@ -21,8 +21,7 @@ class ConeVolumeSlider extends StatelessWidget {
   final double width;
   final double height;
 
-  void _setFromDx(double dx) =>
-      onChanged(((dx / width).clamp(0.0, 1.0)) * max);
+  void _setFromDx(double dx) => onChanged(((dx / width).clamp(0.0, 1.0)) * max);
 
   @override
   Widget build(BuildContext context) {

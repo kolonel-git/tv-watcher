@@ -68,43 +68,55 @@ class _RematchDialogState extends State<RematchDialog> {
       content: SizedBox(
         width: 520,
         height: 420,
-        child: Column(children: [
-          TextField(
-            controller: _query,
-            decoration: InputDecoration(
-              labelText: 'Search TMDB',
-              suffixIcon: IconButton(
-                  icon: const Icon(Icons.search), onPressed: _search),
-            ),
-            onSubmitted: (_) => _search(),
-          ),
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null)
-            Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(_error!,
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.error))),
-          Expanded(
-            child: ListView(children: [
-              for (final r in _results ?? const <TmdbSearchResult>[])
-                ListTile(
-                  title:
-                      Text('${r.name}${r.year != null ? ' (${r.year})' : ''}'),
-                  subtitle: Text(r.overview ?? '',
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  onTap: _busy ? null : () => _pick(r),
+        child: Column(
+          children: [
+            TextField(
+              controller: _query,
+              decoration: InputDecoration(
+                labelText: 'Search TMDB',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _search,
                 ),
-            ]),
-          ),
-        ]),
+              ),
+              onSubmitted: (_) => _search(),
+            ),
+            if (_busy) const LinearProgressIndicator(),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final r in _results ?? const <TmdbSearchResult>[])
+                    ListTile(
+                      title: Text(
+                        '${r.name}${r.year != null ? ' (${r.year})' : ''}',
+                      ),
+                      subtitle: Text(
+                        r.overview ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: _busy ? null : () => _pick(r),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close')),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
       ],
     );
   }
 }
-

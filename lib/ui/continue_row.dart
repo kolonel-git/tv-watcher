@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
 import '../data/database.dart';
 import 'artwork.dart';
 import 'play.dart';
 
 /// Home row of shows in progress. Each card resumes the right episode.
-class ContinueRow extends StatelessWidget {
+class ContinueRow extends StatefulWidget {
   const ContinueRow({super.key, required this.db});
   final AppDatabase db;
 
   @override
+  State<ContinueRow> createState() => _ContinueRowState();
+}
+
+class _ContinueRowState extends State<ContinueRow> {
+  AppDatabase get db => widget.db;
+  late final Stream<List<ContinueItem>> _items = db.watchContinueWatching();
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ContinueItem>>(
-      stream: db.watchContinueWatching(),
+      stream: _items,
       builder: (context, snap) {
         final items = snap.data ?? const <ContinueItem>[];
         if (items.isEmpty) return const SizedBox.shrink();
@@ -21,8 +30,10 @@ class ContinueRow extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
-              child: Text('Continue watching',
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                'Continue watching',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             SizedBox(
               height: 214,
@@ -33,8 +44,8 @@ class ContinueRow extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(width: 16),
                 itemBuilder: (context, i) => ContinueCard(
                   item: items[i],
-                  onTap: () => openEpisode(
-                      context, db, items[i].show, items[i].episode),
+                  onTap: () =>
+                      openEpisode(context, db, items[i].show, items[i].episode),
                 ),
               ),
             ),
@@ -71,8 +82,9 @@ class _ContinueCardState extends State<ContinueCard> {
         ? (e.positionMs / e.durationMs).clamp(0.0, 1.0)
         : 0.0;
     final name = e.tmdbTitle ?? e.title;
-    final image =
-        artworkFile(e.stillFile) != null ? e.stillFile : item.show.backdropFile;
+    final image = artworkFile(e.stillFile) != null
+        ? e.stillFile
+        : item.show.backdropFile;
 
     return MouseRegion(
       onEnter: (_) => _set(true),
@@ -93,54 +105,62 @@ class _ContinueCardState extends State<ContinueCard> {
                   borderRadius: BorderRadius.circular(8),
                   child: SizedBox(
                     height: 144,
-                    child: Stack(fit: StackFit.expand, children: [
-                      ArtworkImage(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ArtworkImage(
                           path: image,
                           cacheWidth: 512,
-                          placeholderLabel: item.show.tmdbName ?? item.show.name),
-                      AnimatedOpacity(
-                        opacity: _active ? 1 : 0,
-                        duration: const Duration(milliseconds: 120),
-                        child: Container(
-                          color: Colors.black45,
-                          child:
-                              const Icon(Icons.play_circle_outline, size: 52),
+                          placeholderLabel:
+                              item.show.tmdbName ?? item.show.name,
                         ),
-                      ),
-                      if (progress > 0)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 4,
-                            backgroundColor: Colors.black54,
-                            color: theme.colorScheme.primary,
+                        AnimatedOpacity(
+                          opacity: _active ? 1 : 0,
+                          duration: const Duration(milliseconds: 120),
+                          child: Container(
+                            color: Colors.black45,
+                            child: const Icon(
+                              Icons.play_circle_outline,
+                              size: 52,
+                            ),
                           ),
                         ),
-                    ]),
+                        if (progress > 0)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 4,
+                              backgroundColor: Colors.black54,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(item.show.tmdbName ?? item.show.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  item.show.tmdbName ?? item.show.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 Text(
                   'S${e.season}E${e.episode}${name != null ? ' · $name' : ''}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: Colors.white70),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Ui.muted),
                 ),
                 Text(
                   resuming
                       ? 'Resume at ${formatDurationMs(item.resumeMs)}'
                       : 'Up next',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: Colors.white54),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Ui.dim),
                 ),
               ],
             ),

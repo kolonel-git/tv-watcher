@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
+
 import 'artwork.dart';
 
 /// Netflix-style poster tile: 2:3 poster, scales up on hover/focus.
@@ -50,50 +52,60 @@ class _PosterCardState extends State<PosterCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Stack(fit: StackFit.expand, children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: ArtworkImage(
-                      path: widget.posterFile,
-                      cacheWidth: 400,
-                      placeholderLabel: widget.title,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: ArtworkImage(
+                        path: widget.posterFile,
+                        cacheWidth: 400,
+                        placeholderLabel: widget.title,
+                      ),
                     ),
-                  ),
-                  if (widget.badge != null)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(4),
+                    if (widget.badge != null)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            widget.badge!,
+                            style: theme.textTheme.labelSmall,
+                          ),
                         ),
-                        child: Text(widget.badge!,
-                            style: theme.textTheme.labelSmall),
                       ),
-                    ),
-                  if (_active)
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white70, width: 2),
+                    if (_active)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Ui.muted, width: 2),
+                        ),
                       ),
-                    ),
-                ]),
+                  ],
+                ),
               ),
               const SizedBox(height: 6),
-              Text(widget.title,
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (widget.subtitle != null)
+                Text(
+                  widget.subtitle!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium),
-              if (widget.subtitle != null)
-                Text(widget.subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: Colors.white54)),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Ui.dim),
+                ),
             ],
           ),
         ),

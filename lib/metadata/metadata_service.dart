@@ -54,14 +54,15 @@ class MetadataService {
 
   bool get _needsFallback => !client.language.toLowerCase().startsWith('en');
 
-  Future<void> _pause() =>
-      requestDelay == Duration.zero ? Future.value() : Future.delayed(requestDelay);
+  Future<void> _pause() => requestDelay == Duration.zero
+      ? Future.value()
+      : Future.delayed(requestDelay);
 
   /// Processes every show not yet matched. Safe to call repeatedly.
   Future<SyncSummary> syncAll() async {
-    final pending = await (db.select(db.shows)
-          ..where((s) => s.metaStatus.equals('none')))
-        .get();
+    final pending = await (db.select(
+      db.shows,
+    )..where((s) => s.metaStatus.equals('none'))).get();
     var matched = 0, ambiguous = 0, noMatch = 0, failed = 0;
     for (final show in pending) {
       try {
@@ -76,27 +77,30 @@ class MetadataService {
         }
       } on SocketException {
         return SyncSummary(
-            matched: matched,
-            ambiguous: ambiguous,
-            noMatch: noMatch,
-            failed: failed,
-            offline: true);
+          matched: matched,
+          ambiguous: ambiguous,
+          noMatch: noMatch,
+          failed: failed,
+          offline: true,
+        );
       } on http.ClientException {
         return SyncSummary(
-            matched: matched,
-            ambiguous: ambiguous,
-            noMatch: noMatch,
-            failed: failed,
-            offline: true);
+          matched: matched,
+          ambiguous: ambiguous,
+          noMatch: noMatch,
+          failed: failed,
+          offline: true,
+        );
       } on TmdbException {
         failed++;
       }
     }
     return SyncSummary(
-        matched: matched,
-        ambiguous: ambiguous,
-        noMatch: noMatch,
-        failed: failed);
+      matched: matched,
+      ambiguous: ambiguous,
+      noMatch: noMatch,
+      failed: failed,
+    );
   }
 
   /// Auto-match (if needed) and fetch details. Returns the resulting
@@ -117,6 +121,7 @@ class MetadataService {
 
   /// User chose a match from candidates. Locks it against auto-rematching.
   Future<void> pickMatch(int showId, int tmdbId) async {
+    await db.allowShowMeta(showId);
     await (db.update(db.shows)..where((s) => s.id.equals(showId))).write(
       ShowsCompanion(
         tmdbId: Value(tmdbId),
@@ -137,6 +142,18 @@ class MetadataService {
     }
   }
 
+  /// Re-fetch metadata for one episode the user had cleared.
+  Future<void> refetchEpisode(int showId, int episodeId) async {
+    await db.allowEpisodeMeta(episodeId);
+    await refresh(showId);
+  }
+
+  /// Re-fetch metadata for a season the user had cleared.
+  Future<void> refetchSeason(int showId, int season) async {
+    await db.allowSeasonMeta(showId, season);
+    await refresh(showId);
+  }
+
   Future<List<TmdbSearchResult>> candidates(String query, {int? year}) =>
       client.searchShow(query, year: year);
 
@@ -146,8 +163,9 @@ class MetadataService {
       (db.select(db.shows)..where((s) => s.id.equals(id))).getSingle();
 
   Future<void> _setStatus(int id, String status) =>
-      (db.update(db.shows)..where((s) => s.id.equals(id)))
-          .write(ShowsCompanion(metaStatus: Value(status)));
+      (db.update(db.shows)..where((s) => s.id.equals(id))).write(
+        ShowsCompanion(metaStatus: Value(status)),
+      );
 
   Future<String> _autoMatch(Show show) async {
     var results = await client.searchShow(show.name, year: show.year);
@@ -166,8 +184,9 @@ class MetadataService {
         : (results.length == 1 ? results.first : null);
     if (pick == null) return 'ambiguous';
 
-    await (db.update(db.shows)..where((s) => s.id.equals(show.id)))
-        .write(ShowsCompanion(tmdbId: Value(pick.id)));
+    await (db.update(db.shows)..where((s) => s.id.equals(show.id))).write(
+      ShowsCompanion(tmdbId: Value(pick.id)),
+    );
     return 'matched';
   }
 
@@ -198,12 +217,14 @@ class MetadataService {
       ),
     );
 
-    final local = await (db.select(db.episodes)
-          ..where((e) => e.showId.equals(show.id) & e.season.isNotNull()))
-        .get();
+    final local = await (db.select(
+      db.episodes,
+    )..where((e) => e.showId.equals(show.id) & e.season.isNotNull())).get();
     final seasons = {for (final e in local) e.season!};
     for (final season in seasons) {
-      var eps = await client.seasonEpisodes(id, season).catchError(
+      var eps = await client
+          .seasonEpisodes(id, season)
+          .catchError(
             (Object e) => e is TmdbException && e.statusCode == 404
                 ? <TmdbEpisode>[]
                 : throw e,
@@ -212,9 +233,12 @@ class MetadataService {
       if (_needsFallback &&
           eps.any((e) => e.name == null || e.overview == null)) {
         final en = {
-          for (final e in await client.seasonEpisodes(id, season,
-              lang: _fallbackLang))
-            e.number: e
+          for (final e in await client.seasonEpisodes(
+            id,
+            season,
+            lang: _fallbackLang,
+          ))
+            e.number: e,
         };
         eps = [
           for (final e in eps)
@@ -230,11 +254,14 @@ class MetadataService {
         await _pause();
       }
       final byNumber = {for (final e in eps) e.number: e};
-      for (final row in local.where((e) => e.season == season)) {
+      for (final row in local.where((e) => e.season == season && !e.metaSkip)) {
         final t = byNumber[row.episode];
         if (t == null) continue;
         final still = await _cache(
-            t.stillPath, 'w300', 'still_${id}_${season}_${t.number}');
+          t.stillPath,
+          'w300',
+          'still_${id}_${season}_${t.number}',
+        );
         await (db.update(db.episodes)..where((e) => e.id.equals(row.id))).write(
           EpisodesCompanion(
             tmdbTitle: Value(t.name),

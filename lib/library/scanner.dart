@@ -24,7 +24,9 @@ class ScanResult {
 /// Lists video files under [root] (read-only). Returns absolute paths.
 Future<List<String>> listVideoFiles(String root) async {
   final out = <String>[];
-  await for (final e in Directory(root).list(recursive: true, followLinks: false)) {
+  await for (final e in Directory(
+    root,
+  ).list(recursive: true, followLinks: false)) {
     if (e is File && isVideoFile(e.path)) out.add(e.path);
   }
   return out;
@@ -41,14 +43,18 @@ Future<ScanResult> scanFolder(
   final root = folder.path;
   if (listFiles == null && !await Directory(root).exists()) {
     return const ScanResult(
-        added: 0, missing: 0, unsorted: 0, skippedOffline: true);
+      added: 0,
+      missing: 0,
+      unsorted: 0,
+      skippedOffline: true,
+    );
   }
   final files = await (listFiles ?? listVideoFiles)(root);
   final found = files.toSet();
 
-  final existing = await (db.select(db.episodes)
-        ..where((e) => e.folderId.equals(folder.id)))
-      .get();
+  final existing = await (db.select(
+    db.episodes,
+  )..where((e) => e.folderId.equals(folder.id))).get();
   final byPath = {for (final e in existing) e.filePath: e};
 
   var added = 0;
@@ -68,7 +74,9 @@ Future<ScanResult> scanFolder(
         await _applyParse(db, row.id, root, path, markPresent: true);
         continue;
       }
-      final id = await db.into(db.episodes).insert(
+      final id = await db
+          .into(db.episodes)
+          .insert(
             EpisodesCompanion.insert(filePath: path, folderId: folder.id),
           );
       await _applyParse(db, id, root, path);
@@ -77,22 +85,28 @@ Future<ScanResult> scanFolder(
 
     for (final row in existing) {
       if (!found.contains(row.filePath) && !row.missing) {
-        await (db.update(db.episodes)..where((e) => e.id.equals(row.id)))
-            .write(const EpisodesCompanion(missing: Value(true)));
+        await (db.update(db.episodes)..where((e) => e.id.equals(row.id))).write(
+          const EpisodesCompanion(missing: Value(true)),
+        );
         missing++;
       }
     }
   });
 
-  final totalUnsorted = await (db.select(db.episodes)
-        ..where((e) =>
-            e.folderId.equals(folder.id) &
-            e.showId.isNull() &
-            e.missing.equals(false)))
-      .get();
+  final totalUnsorted =
+      await (db.select(db.episodes)..where(
+            (e) =>
+                e.folderId.equals(folder.id) &
+                e.showId.isNull() &
+                e.missing.equals(false),
+          ))
+          .get();
   await db.deleteEmptyShows();
   return ScanResult(
-      added: added, missing: missing, unsorted: totalUnsorted.length);
+    added: added,
+    missing: missing,
+    unsorted: totalUnsorted.length,
+  );
 }
 
 Future<bool> _applyParse(
@@ -117,7 +131,11 @@ Future<bool> _applyParse(
     );
     return false;
   }
-  final showId = await db.upsertShow(parsed.showName, parsed.showKey, parsed.year);
+  final showId = await db.upsertShow(
+    parsed.showName,
+    parsed.showKey,
+    parsed.year,
+  );
   await (db.update(db.episodes)..where((e) => e.id.equals(episodeId))).write(
     EpisodesCompanion(
       showId: Value(showId),

@@ -46,7 +46,12 @@ Output: `build\windows\x64\runner\Release\` (copy the whole folder; it is portab
 | F / double-click | Fullscreen |
 | Esc | Exit fullscreen |
 | O | Open file |
+| N | Next episode (library playback) |
+| V | Cycle subtitles (off, then each track) |
+| B | Cycle audio tracks |
+
+Subtitles: drag them to move, double-click to reset. They sit above the control bar while it is visible. Subtitle look: subtitle menu > Subtitle settings. Volume is remembered.
 
 ## Config
 
-TMDB API key (Sprint 3): copy `.env.example` to `.env` and fill in. `.env` is gitignored.
+TMDB Read Access Token: copy `.env.example` to `.env` and set `TMDB_READ_TOKEN` (and optionally `TMDB_LANGUAGE`, default `en-US`). `.env` is gitignored.

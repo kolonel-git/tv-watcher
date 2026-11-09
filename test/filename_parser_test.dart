@@ -3,7 +3,12 @@ import 'package:tv_watcher/library/filename_parser.dart';
 
 ParsedEpisode e(String show, int s, int ep, {int? end, int? year}) =>
     ParsedEpisode(
-        showName: show, season: s, episode: ep, endEpisode: end, year: year);
+      showName: show,
+      season: s,
+      episode: ep,
+      endEpisode: end,
+      year: year,
+    );
 
 void main() {
   titleTests();
@@ -41,8 +46,7 @@ void main() {
       'Breaking Bad/Season 2/E05.mkv': e('Breaking Bad', 2, 5),
       'Breaking Bad/S03/Episode.06.mkv': e('Breaking Bad', 3, 6),
       'Breaking Bad/Series 4/Ep.07.mkv': e('Breaking Bad', 4, 7),
-      'Some Show/Season 1/Some Show - S01E01 - Pilot.mkv':
-          e('Some Show', 1, 1),
+      'Some Show/Season 1/Some Show - S01E01 - Pilot.mkv': e('Some Show', 1, 1),
       'Some Show Season 2/Episode 1.mkv': e('Some Show', 2, 1),
       'Some Show - S02/Episode 2.mkv': e('Some Show', 2, 2),
       'TV/Some Show/Season 1/Episode 3.mkv': e('Some Show', 1, 3),
@@ -91,8 +95,10 @@ void main() {
   });
 
   test('showKey ignores case, punctuation', () {
-    expect(e('The Office (US)', 1, 1).showKey,
-        e('the.office.us', 1, 1).showKey);
+    expect(
+      e('The Office (US)', 1, 1).showKey,
+      e('the.office.us', 1, 1).showKey,
+    );
   });
 
   test('isVideoFile', () {
@@ -127,13 +133,15 @@ void absoluteTests() {
   group('absolute numbering', () {
     test('DeadFish style', () {
       final g = parseAbsolutePath(
-          r"D:\TV\JoJo\[DeadFish] JoJo no Kimyou na Bouken (2012) - 07 [BD][720p][AAC].mp4")!;
+        r"D:\TV\JoJo\[DeadFish] JoJo no Kimyou na Bouken (2012) - 07 [BD][720p][AAC].mp4",
+      )!;
       expect(g.groupLabel, 'JoJo no Kimyou na Bouken');
       expect(g.number, 7);
     });
     test('HorribleSubs arc', () {
       final g = parseAbsolutePath(
-          "[HorribleSubs] JoJo's Bizarre Adventure - Stardust Crusaders - 12 [480p].mkv")!;
+        "[HorribleSubs] JoJo's Bizarre Adventure - Stardust Crusaders - 12 [480p].mkv",
+      )!;
       expect(g.groupLabel, "JoJo's Bizarre Adventure - Stardust Crusaders");
       expect(g.number, 12);
     });
@@ -154,9 +162,11 @@ void absoluteTests() {
     });
     test('suggest show name from folder', () {
       expect(
-          suggestShowNameFromFolder(
-              "JoJo's Bizarre Adventure Complete (2012-2016)/Watched/x - 01.mp4"),
-          "JoJo's Bizarre Adventure");
+        suggestShowNameFromFolder(
+          "JoJo's Bizarre Adventure Complete (2012-2016)/Watched/x - 01.mp4",
+        ),
+        "JoJo's Bizarre Adventure",
+      );
       expect(suggestShowNameFromFolder('x - 01.mp4'), isNull);
     });
   });

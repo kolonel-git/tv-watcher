@@ -71,11 +71,8 @@ int? _yearOf(Object? date) {
 
 /// Thin TMDB v3 client using a Read Access Token (Bearer).
 class TmdbClient {
-  TmdbClient({
-    required this.token,
-    required this.language,
-    http.Client? client,
-  }) : _http = client ?? http.Client();
+  TmdbClient({required this.token, required this.language, http.Client? client})
+    : _http = client ?? http.Client();
 
   final String token;
   final String language;
@@ -84,20 +81,25 @@ class TmdbClient {
   static const _host = 'api.themoviedb.org';
 
   Future<Map<String, dynamic>> _get(
-      String path, Map<String, String> query) async {
+    String path,
+    Map<String, String> query,
+  ) async {
     final uri = Uri.https(_host, '/3$path', query);
-    final res = await _http.get(uri, headers: {
-      'Authorization': 'Bearer $token',
-      'Accept': 'application/json',
-    });
+    final res = await _http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+    );
     if (res.statusCode != 200) {
       throw TmdbException('GET $path failed', statusCode: res.statusCode);
     }
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
   }
 
-  Future<List<TmdbSearchResult>> searchShow(String query,
-      {int? year, String? lang}) async {
+  Future<List<TmdbSearchResult>> searchShow(
+    String query, {
+    int? year,
+    String? lang,
+  }) async {
     final json = await _get('/search/tv', {
       'query': query,
       'language': lang ?? language,
@@ -126,10 +128,14 @@ class TmdbClient {
     );
   }
 
-  Future<List<TmdbEpisode>> seasonEpisodes(int showId, int season,
-      {String? lang}) async {
-    final r = await _get(
-        '/tv/$showId/season/$season', {'language': lang ?? language});
+  Future<List<TmdbEpisode>> seasonEpisodes(
+    int showId,
+    int season, {
+    String? lang,
+  }) async {
+    final r = await _get('/tv/$showId/season/$season', {
+      'language': lang ?? language,
+    });
     return [
       for (final e in (r['episodes'] as List? ?? const []))
         TmdbEpisode(

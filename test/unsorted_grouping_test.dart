@@ -4,11 +4,12 @@ import 'package:tv_watcher/library/unsorted_grouping.dart';
 
 UnsortedItem item(int id, String rel, {int folder = 1, String? root}) =>
     UnsortedItem(
-        id: id,
-        folderId: folder,
-        path: 'C:/lib/$rel',
-        relativePath: rel,
-        rootName: root);
+      id: id,
+      folderId: folder,
+      path: 'C:/lib/$rel',
+      relativePath: rel,
+      rootName: root,
+    );
 
 void main() {
   group('parseAbsolutePath without dash', () {
@@ -18,8 +19,10 @@ void main() {
       expect(g.number, 7);
     });
     test('episode word', () {
-      expect(parseAbsolutePath('Show Name Episode 7.mkv')!.groupLabel,
-          'Show Name');
+      expect(
+        parseAbsolutePath('Show Name Episode 7.mkv')!.groupLabel,
+        'Show Name',
+      );
       expect(parseAbsolutePath('Show.Name.Ep.07.mkv')!.number, 7);
       expect(parseAbsolutePath('Show Name E12.mkv')!.number, 12);
     });
@@ -39,14 +42,19 @@ void main() {
     test('skips generic folders', () {
       expect(suggestShowNameFromFolder('Watched/x - 01.mp4'), isNull);
       expect(
-          suggestShowNameFromFolder('Watched/x - 01.mp4',
-              rootName: "JoJo's Bizarre Adventure Complete (2012-2016)"),
-          "JoJo's Bizarre Adventure");
+        suggestShowNameFromFolder(
+          'Watched/x - 01.mp4',
+          rootName: "JoJo's Bizarre Adventure Complete (2012-2016)",
+        ),
+        "JoJo's Bizarre Adventure",
+      );
       expect(suggestShowNameFromFolder('Naruto/Season 2/x - 01.mkv'), 'Naruto');
     });
     test('generic library name gives no hint', () {
-      expect(suggestShowNameFromFolder('x - 01.mkv', rootName: 'TV Shows'),
-          isNull);
+      expect(
+        suggestShowNameFromFolder('x - 01.mkv', rootName: 'TV Shows'),
+        isNull,
+      );
     });
   });
 

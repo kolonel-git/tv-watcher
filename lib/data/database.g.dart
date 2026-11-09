@@ -1032,6 +1032,21 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _metaSkipMeta = const VerificationMeta(
+    'metaSkip',
+  );
+  @override
+  late final GeneratedColumn<bool> metaSkip = GeneratedColumn<bool>(
+    'meta_skip',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("meta_skip" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _addedAtMeta = const VerificationMeta(
     'addedAt',
   );
@@ -1111,6 +1126,7 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
     stillFile,
     missing,
     manual,
+    metaSkip,
     addedAt,
     positionMs,
     durationMs,
@@ -1220,6 +1236,12 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         manual.isAcceptableOrUnknown(data['manual']!, _manualMeta),
       );
     }
+    if (data.containsKey('meta_skip')) {
+      context.handle(
+        _metaSkipMeta,
+        metaSkip.isAcceptableOrUnknown(data['meta_skip']!, _metaSkipMeta),
+      );
+    }
     if (data.containsKey('added_at')) {
       context.handle(
         _addedAtMeta,
@@ -1322,6 +1344,10 @@ class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
         DriftSqlType.bool,
         data['${effectivePrefix}manual'],
       )!,
+      metaSkip: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}meta_skip'],
+      )!,
       addedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
@@ -1371,6 +1397,10 @@ class Episode extends DataClass implements Insertable<Episode> {
 
   /// User assigned show/season/episode by hand; rescans never overwrite it.
   final bool manual;
+
+  /// User cleared this episode's TMDB data; metadata fetches skip it until
+  /// it is explicitly re-fetched.
+  final bool metaSkip;
   final DateTime addedAt;
 
   /// Resume point in ms. 0 = none / start over.
@@ -1394,6 +1424,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     this.stillFile,
     required this.missing,
     required this.manual,
+    required this.metaSkip,
     required this.addedAt,
     required this.positionMs,
     required this.durationMs,
@@ -1438,6 +1469,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     }
     map['missing'] = Variable<bool>(missing);
     map['manual'] = Variable<bool>(manual);
+    map['meta_skip'] = Variable<bool>(metaSkip);
     map['added_at'] = Variable<DateTime>(addedAt);
     map['position_ms'] = Variable<int>(positionMs);
     map['duration_ms'] = Variable<int>(durationMs);
@@ -1485,6 +1517,7 @@ class Episode extends DataClass implements Insertable<Episode> {
           : Value(stillFile),
       missing: Value(missing),
       manual: Value(manual),
+      metaSkip: Value(metaSkip),
       addedAt: Value(addedAt),
       positionMs: Value(positionMs),
       durationMs: Value(durationMs),
@@ -1516,6 +1549,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       stillFile: serializer.fromJson<String?>(json['stillFile']),
       missing: serializer.fromJson<bool>(json['missing']),
       manual: serializer.fromJson<bool>(json['manual']),
+      metaSkip: serializer.fromJson<bool>(json['metaSkip']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
       positionMs: serializer.fromJson<int>(json['positionMs']),
       durationMs: serializer.fromJson<int>(json['durationMs']),
@@ -1542,6 +1576,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       'stillFile': serializer.toJson<String?>(stillFile),
       'missing': serializer.toJson<bool>(missing),
       'manual': serializer.toJson<bool>(manual),
+      'metaSkip': serializer.toJson<bool>(metaSkip),
       'addedAt': serializer.toJson<DateTime>(addedAt),
       'positionMs': serializer.toJson<int>(positionMs),
       'durationMs': serializer.toJson<int>(durationMs),
@@ -1566,6 +1601,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     Value<String?> stillFile = const Value.absent(),
     bool? missing,
     bool? manual,
+    bool? metaSkip,
     DateTime? addedAt,
     int? positionMs,
     int? durationMs,
@@ -1587,6 +1623,7 @@ class Episode extends DataClass implements Insertable<Episode> {
     stillFile: stillFile.present ? stillFile.value : this.stillFile,
     missing: missing ?? this.missing,
     manual: manual ?? this.manual,
+    metaSkip: metaSkip ?? this.metaSkip,
     addedAt: addedAt ?? this.addedAt,
     positionMs: positionMs ?? this.positionMs,
     durationMs: durationMs ?? this.durationMs,
@@ -1612,6 +1649,7 @@ class Episode extends DataClass implements Insertable<Episode> {
       stillFile: data.stillFile.present ? data.stillFile.value : this.stillFile,
       missing: data.missing.present ? data.missing.value : this.missing,
       manual: data.manual.present ? data.manual.value : this.manual,
+      metaSkip: data.metaSkip.present ? data.metaSkip.value : this.metaSkip,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       positionMs: data.positionMs.present
           ? data.positionMs.value
@@ -1644,6 +1682,7 @@ class Episode extends DataClass implements Insertable<Episode> {
           ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
+          ..write('metaSkip: $metaSkip, ')
           ..write('addedAt: $addedAt, ')
           ..write('positionMs: $positionMs, ')
           ..write('durationMs: $durationMs, ')
@@ -1654,7 +1693,7 @@ class Episode extends DataClass implements Insertable<Episode> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     filePath,
     folderId,
@@ -1670,12 +1709,13 @@ class Episode extends DataClass implements Insertable<Episode> {
     stillFile,
     missing,
     manual,
+    metaSkip,
     addedAt,
     positionMs,
     durationMs,
     watched,
     lastPlayedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1695,6 +1735,7 @@ class Episode extends DataClass implements Insertable<Episode> {
           other.stillFile == this.stillFile &&
           other.missing == this.missing &&
           other.manual == this.manual &&
+          other.metaSkip == this.metaSkip &&
           other.addedAt == this.addedAt &&
           other.positionMs == this.positionMs &&
           other.durationMs == this.durationMs &&
@@ -1718,6 +1759,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
   final Value<String?> stillFile;
   final Value<bool> missing;
   final Value<bool> manual;
+  final Value<bool> metaSkip;
   final Value<DateTime> addedAt;
   final Value<int> positionMs;
   final Value<int> durationMs;
@@ -1739,6 +1781,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.stillFile = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
+    this.metaSkip = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.positionMs = const Value.absent(),
     this.durationMs = const Value.absent(),
@@ -1761,6 +1804,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     this.stillFile = const Value.absent(),
     this.missing = const Value.absent(),
     this.manual = const Value.absent(),
+    this.metaSkip = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.positionMs = const Value.absent(),
     this.durationMs = const Value.absent(),
@@ -1784,6 +1828,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Expression<String>? stillFile,
     Expression<bool>? missing,
     Expression<bool>? manual,
+    Expression<bool>? metaSkip,
     Expression<DateTime>? addedAt,
     Expression<int>? positionMs,
     Expression<int>? durationMs,
@@ -1806,6 +1851,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       if (stillFile != null) 'still_file': stillFile,
       if (missing != null) 'missing': missing,
       if (manual != null) 'manual': manual,
+      if (metaSkip != null) 'meta_skip': metaSkip,
       if (addedAt != null) 'added_at': addedAt,
       if (positionMs != null) 'position_ms': positionMs,
       if (durationMs != null) 'duration_ms': durationMs,
@@ -1830,6 +1876,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     Value<String?>? stillFile,
     Value<bool>? missing,
     Value<bool>? manual,
+    Value<bool>? metaSkip,
     Value<DateTime>? addedAt,
     Value<int>? positionMs,
     Value<int>? durationMs,
@@ -1852,6 +1899,7 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
       stillFile: stillFile ?? this.stillFile,
       missing: missing ?? this.missing,
       manual: manual ?? this.manual,
+      metaSkip: metaSkip ?? this.metaSkip,
       addedAt: addedAt ?? this.addedAt,
       positionMs: positionMs ?? this.positionMs,
       durationMs: durationMs ?? this.durationMs,
@@ -1908,6 +1956,9 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
     if (manual.present) {
       map['manual'] = Variable<bool>(manual.value);
     }
+    if (metaSkip.present) {
+      map['meta_skip'] = Variable<bool>(metaSkip.value);
+    }
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
@@ -1944,11 +1995,737 @@ class EpisodesCompanion extends UpdateCompanion<Episode> {
           ..write('stillFile: $stillFile, ')
           ..write('missing: $missing, ')
           ..write('manual: $manual, ')
+          ..write('metaSkip: $metaSkip, ')
           ..write('addedAt: $addedAt, ')
           ..write('positionMs: $positionMs, ')
           ..write('durationMs: $durationMs, ')
           ..write('watched: $watched, ')
           ..write('lastPlayedAt: $lastPlayedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TrackPrefsTable extends TrackPrefs
+    with TableInfo<$TrackPrefsTable, TrackPref> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackPrefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _showIdMeta = const VerificationMeta('showId');
+  @override
+  late final GeneratedColumn<int> showId = GeneratedColumn<int>(
+    'show_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shows (id)',
+    ),
+  );
+  static const VerificationMeta _audioModeMeta = const VerificationMeta(
+    'audioMode',
+  );
+  @override
+  late final GeneratedColumn<String> audioMode = GeneratedColumn<String>(
+    'audio_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('auto'),
+  );
+  static const VerificationMeta _audioLangMeta = const VerificationMeta(
+    'audioLang',
+  );
+  @override
+  late final GeneratedColumn<String> audioLang = GeneratedColumn<String>(
+    'audio_lang',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _audioTitleMeta = const VerificationMeta(
+    'audioTitle',
+  );
+  @override
+  late final GeneratedColumn<String> audioTitle = GeneratedColumn<String>(
+    'audio_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subModeMeta = const VerificationMeta(
+    'subMode',
+  );
+  @override
+  late final GeneratedColumn<String> subMode = GeneratedColumn<String>(
+    'sub_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('auto'),
+  );
+  static const VerificationMeta _subLangMeta = const VerificationMeta(
+    'subLang',
+  );
+  @override
+  late final GeneratedColumn<String> subLang = GeneratedColumn<String>(
+    'sub_lang',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subTitleMeta = const VerificationMeta(
+    'subTitle',
+  );
+  @override
+  late final GeneratedColumn<String> subTitle = GeneratedColumn<String>(
+    'sub_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subExternalMeta = const VerificationMeta(
+    'subExternal',
+  );
+  @override
+  late final GeneratedColumn<bool> subExternal = GeneratedColumn<bool>(
+    'sub_external',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("sub_external" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    showId,
+    audioMode,
+    audioLang,
+    audioTitle,
+    subMode,
+    subLang,
+    subTitle,
+    subExternal,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'track_prefs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrackPref> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('show_id')) {
+      context.handle(
+        _showIdMeta,
+        showId.isAcceptableOrUnknown(data['show_id']!, _showIdMeta),
+      );
+    }
+    if (data.containsKey('audio_mode')) {
+      context.handle(
+        _audioModeMeta,
+        audioMode.isAcceptableOrUnknown(data['audio_mode']!, _audioModeMeta),
+      );
+    }
+    if (data.containsKey('audio_lang')) {
+      context.handle(
+        _audioLangMeta,
+        audioLang.isAcceptableOrUnknown(data['audio_lang']!, _audioLangMeta),
+      );
+    }
+    if (data.containsKey('audio_title')) {
+      context.handle(
+        _audioTitleMeta,
+        audioTitle.isAcceptableOrUnknown(data['audio_title']!, _audioTitleMeta),
+      );
+    }
+    if (data.containsKey('sub_mode')) {
+      context.handle(
+        _subModeMeta,
+        subMode.isAcceptableOrUnknown(data['sub_mode']!, _subModeMeta),
+      );
+    }
+    if (data.containsKey('sub_lang')) {
+      context.handle(
+        _subLangMeta,
+        subLang.isAcceptableOrUnknown(data['sub_lang']!, _subLangMeta),
+      );
+    }
+    if (data.containsKey('sub_title')) {
+      context.handle(
+        _subTitleMeta,
+        subTitle.isAcceptableOrUnknown(data['sub_title']!, _subTitleMeta),
+      );
+    }
+    if (data.containsKey('sub_external')) {
+      context.handle(
+        _subExternalMeta,
+        subExternal.isAcceptableOrUnknown(
+          data['sub_external']!,
+          _subExternalMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {showId};
+  @override
+  TrackPref map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackPref(
+      showId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}show_id'],
+      )!,
+      audioMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audio_mode'],
+      )!,
+      audioLang: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audio_lang'],
+      ),
+      audioTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audio_title'],
+      ),
+      subMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_mode'],
+      )!,
+      subLang: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_lang'],
+      ),
+      subTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_title'],
+      ),
+      subExternal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}sub_external'],
+      )!,
+    );
+  }
+
+  @override
+  $TrackPrefsTable createAlias(String alias) {
+    return $TrackPrefsTable(attachedDatabase, alias);
+  }
+}
+
+class TrackPref extends DataClass implements Insertable<TrackPref> {
+  final int showId;
+
+  /// auto | track
+  final String audioMode;
+  final String? audioLang;
+  final String? audioTitle;
+
+  /// auto | off | track
+  final String subMode;
+  final String? subLang;
+  final String? subTitle;
+  final bool subExternal;
+  const TrackPref({
+    required this.showId,
+    required this.audioMode,
+    this.audioLang,
+    this.audioTitle,
+    required this.subMode,
+    this.subLang,
+    this.subTitle,
+    required this.subExternal,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['show_id'] = Variable<int>(showId);
+    map['audio_mode'] = Variable<String>(audioMode);
+    if (!nullToAbsent || audioLang != null) {
+      map['audio_lang'] = Variable<String>(audioLang);
+    }
+    if (!nullToAbsent || audioTitle != null) {
+      map['audio_title'] = Variable<String>(audioTitle);
+    }
+    map['sub_mode'] = Variable<String>(subMode);
+    if (!nullToAbsent || subLang != null) {
+      map['sub_lang'] = Variable<String>(subLang);
+    }
+    if (!nullToAbsent || subTitle != null) {
+      map['sub_title'] = Variable<String>(subTitle);
+    }
+    map['sub_external'] = Variable<bool>(subExternal);
+    return map;
+  }
+
+  TrackPrefsCompanion toCompanion(bool nullToAbsent) {
+    return TrackPrefsCompanion(
+      showId: Value(showId),
+      audioMode: Value(audioMode),
+      audioLang: audioLang == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioLang),
+      audioTitle: audioTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioTitle),
+      subMode: Value(subMode),
+      subLang: subLang == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subLang),
+      subTitle: subTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subTitle),
+      subExternal: Value(subExternal),
+    );
+  }
+
+  factory TrackPref.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackPref(
+      showId: serializer.fromJson<int>(json['showId']),
+      audioMode: serializer.fromJson<String>(json['audioMode']),
+      audioLang: serializer.fromJson<String?>(json['audioLang']),
+      audioTitle: serializer.fromJson<String?>(json['audioTitle']),
+      subMode: serializer.fromJson<String>(json['subMode']),
+      subLang: serializer.fromJson<String?>(json['subLang']),
+      subTitle: serializer.fromJson<String?>(json['subTitle']),
+      subExternal: serializer.fromJson<bool>(json['subExternal']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'showId': serializer.toJson<int>(showId),
+      'audioMode': serializer.toJson<String>(audioMode),
+      'audioLang': serializer.toJson<String?>(audioLang),
+      'audioTitle': serializer.toJson<String?>(audioTitle),
+      'subMode': serializer.toJson<String>(subMode),
+      'subLang': serializer.toJson<String?>(subLang),
+      'subTitle': serializer.toJson<String?>(subTitle),
+      'subExternal': serializer.toJson<bool>(subExternal),
+    };
+  }
+
+  TrackPref copyWith({
+    int? showId,
+    String? audioMode,
+    Value<String?> audioLang = const Value.absent(),
+    Value<String?> audioTitle = const Value.absent(),
+    String? subMode,
+    Value<String?> subLang = const Value.absent(),
+    Value<String?> subTitle = const Value.absent(),
+    bool? subExternal,
+  }) => TrackPref(
+    showId: showId ?? this.showId,
+    audioMode: audioMode ?? this.audioMode,
+    audioLang: audioLang.present ? audioLang.value : this.audioLang,
+    audioTitle: audioTitle.present ? audioTitle.value : this.audioTitle,
+    subMode: subMode ?? this.subMode,
+    subLang: subLang.present ? subLang.value : this.subLang,
+    subTitle: subTitle.present ? subTitle.value : this.subTitle,
+    subExternal: subExternal ?? this.subExternal,
+  );
+  TrackPref copyWithCompanion(TrackPrefsCompanion data) {
+    return TrackPref(
+      showId: data.showId.present ? data.showId.value : this.showId,
+      audioMode: data.audioMode.present ? data.audioMode.value : this.audioMode,
+      audioLang: data.audioLang.present ? data.audioLang.value : this.audioLang,
+      audioTitle: data.audioTitle.present
+          ? data.audioTitle.value
+          : this.audioTitle,
+      subMode: data.subMode.present ? data.subMode.value : this.subMode,
+      subLang: data.subLang.present ? data.subLang.value : this.subLang,
+      subTitle: data.subTitle.present ? data.subTitle.value : this.subTitle,
+      subExternal: data.subExternal.present
+          ? data.subExternal.value
+          : this.subExternal,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackPref(')
+          ..write('showId: $showId, ')
+          ..write('audioMode: $audioMode, ')
+          ..write('audioLang: $audioLang, ')
+          ..write('audioTitle: $audioTitle, ')
+          ..write('subMode: $subMode, ')
+          ..write('subLang: $subLang, ')
+          ..write('subTitle: $subTitle, ')
+          ..write('subExternal: $subExternal')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    showId,
+    audioMode,
+    audioLang,
+    audioTitle,
+    subMode,
+    subLang,
+    subTitle,
+    subExternal,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackPref &&
+          other.showId == this.showId &&
+          other.audioMode == this.audioMode &&
+          other.audioLang == this.audioLang &&
+          other.audioTitle == this.audioTitle &&
+          other.subMode == this.subMode &&
+          other.subLang == this.subLang &&
+          other.subTitle == this.subTitle &&
+          other.subExternal == this.subExternal);
+}
+
+class TrackPrefsCompanion extends UpdateCompanion<TrackPref> {
+  final Value<int> showId;
+  final Value<String> audioMode;
+  final Value<String?> audioLang;
+  final Value<String?> audioTitle;
+  final Value<String> subMode;
+  final Value<String?> subLang;
+  final Value<String?> subTitle;
+  final Value<bool> subExternal;
+  const TrackPrefsCompanion({
+    this.showId = const Value.absent(),
+    this.audioMode = const Value.absent(),
+    this.audioLang = const Value.absent(),
+    this.audioTitle = const Value.absent(),
+    this.subMode = const Value.absent(),
+    this.subLang = const Value.absent(),
+    this.subTitle = const Value.absent(),
+    this.subExternal = const Value.absent(),
+  });
+  TrackPrefsCompanion.insert({
+    this.showId = const Value.absent(),
+    this.audioMode = const Value.absent(),
+    this.audioLang = const Value.absent(),
+    this.audioTitle = const Value.absent(),
+    this.subMode = const Value.absent(),
+    this.subLang = const Value.absent(),
+    this.subTitle = const Value.absent(),
+    this.subExternal = const Value.absent(),
+  });
+  static Insertable<TrackPref> custom({
+    Expression<int>? showId,
+    Expression<String>? audioMode,
+    Expression<String>? audioLang,
+    Expression<String>? audioTitle,
+    Expression<String>? subMode,
+    Expression<String>? subLang,
+    Expression<String>? subTitle,
+    Expression<bool>? subExternal,
+  }) {
+    return RawValuesInsertable({
+      if (showId != null) 'show_id': showId,
+      if (audioMode != null) 'audio_mode': audioMode,
+      if (audioLang != null) 'audio_lang': audioLang,
+      if (audioTitle != null) 'audio_title': audioTitle,
+      if (subMode != null) 'sub_mode': subMode,
+      if (subLang != null) 'sub_lang': subLang,
+      if (subTitle != null) 'sub_title': subTitle,
+      if (subExternal != null) 'sub_external': subExternal,
+    });
+  }
+
+  TrackPrefsCompanion copyWith({
+    Value<int>? showId,
+    Value<String>? audioMode,
+    Value<String?>? audioLang,
+    Value<String?>? audioTitle,
+    Value<String>? subMode,
+    Value<String?>? subLang,
+    Value<String?>? subTitle,
+    Value<bool>? subExternal,
+  }) {
+    return TrackPrefsCompanion(
+      showId: showId ?? this.showId,
+      audioMode: audioMode ?? this.audioMode,
+      audioLang: audioLang ?? this.audioLang,
+      audioTitle: audioTitle ?? this.audioTitle,
+      subMode: subMode ?? this.subMode,
+      subLang: subLang ?? this.subLang,
+      subTitle: subTitle ?? this.subTitle,
+      subExternal: subExternal ?? this.subExternal,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (showId.present) {
+      map['show_id'] = Variable<int>(showId.value);
+    }
+    if (audioMode.present) {
+      map['audio_mode'] = Variable<String>(audioMode.value);
+    }
+    if (audioLang.present) {
+      map['audio_lang'] = Variable<String>(audioLang.value);
+    }
+    if (audioTitle.present) {
+      map['audio_title'] = Variable<String>(audioTitle.value);
+    }
+    if (subMode.present) {
+      map['sub_mode'] = Variable<String>(subMode.value);
+    }
+    if (subLang.present) {
+      map['sub_lang'] = Variable<String>(subLang.value);
+    }
+    if (subTitle.present) {
+      map['sub_title'] = Variable<String>(subTitle.value);
+    }
+    if (subExternal.present) {
+      map['sub_external'] = Variable<bool>(subExternal.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackPrefsCompanion(')
+          ..write('showId: $showId, ')
+          ..write('audioMode: $audioMode, ')
+          ..write('audioLang: $audioLang, ')
+          ..write('audioTitle: $audioTitle, ')
+          ..write('subMode: $subMode, ')
+          ..write('subLang: $subLang, ')
+          ..write('subTitle: $subTitle, ')
+          ..write('subExternal: $subExternal')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AppSettingsTable extends AppSettings
+    with TableInfo<$AppSettingsTable, AppSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  AppSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSetting(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $AppSettingsTable createAlias(String alias) {
+    return $AppSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class AppSetting extends DataClass implements Insertable<AppSetting> {
+  final String key;
+  final String value;
+  const AppSetting({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  AppSettingsCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsCompanion(key: Value(key), value: Value(value));
+  }
+
+  factory AppSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSetting(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  AppSetting copyWith({String? key, String? value}) =>
+      AppSetting(key: key ?? this.key, value: value ?? this.value);
+  AppSetting copyWithCompanion(AppSettingsCompanion data) {
+    return AppSetting(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSetting(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSetting &&
+          other.key == this.key &&
+          other.value == this.value);
+}
+
+class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const AppSettingsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AppSettingsCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       value = Value(value);
+  static Insertable<AppSetting> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AppSettingsCompanion copyWith({
+    Value<String>? key,
+    Value<String>? value,
+    Value<int>? rowid,
+  }) {
+    return AppSettingsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1960,6 +2737,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LibraryFoldersTable libraryFolders = $LibraryFoldersTable(this);
   late final $ShowsTable shows = $ShowsTable(this);
   late final $EpisodesTable episodes = $EpisodesTable(this);
+  late final $TrackPrefsTable trackPrefs = $TrackPrefsTable(this);
+  late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1968,6 +2747,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     libraryFolders,
     shows,
     episodes,
+    trackPrefs,
+    appSettings,
   ];
 }
 
@@ -2252,6 +3033,24 @@ final class $$ShowsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$TrackPrefsTable, List<TrackPref>>
+  _trackPrefsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.trackPrefs,
+    aliasName: 'shows__id__track_prefs__show_id',
+  );
+
+  $$TrackPrefsTableProcessedTableManager get trackPrefsRefs {
+    final manager = $$TrackPrefsTableTableManager(
+      $_db,
+      $_db.trackPrefs,
+    ).filter((f) => f.showId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_trackPrefsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
@@ -2333,6 +3132,31 @@ class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
           }) => $$EpisodesTableFilterComposer(
             $db: $db,
             $table: $db.episodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> trackPrefsRefs(
+    Expression<bool> Function($$TrackPrefsTableFilterComposer f) f,
+  ) {
+    final $$TrackPrefsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trackPrefs,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackPrefsTableFilterComposer(
+            $db: $db,
+            $table: $db.trackPrefs,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2482,6 +3306,31 @@ class $$ShowsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> trackPrefsRefs<T extends Object>(
+    Expression<T> Function($$TrackPrefsTableAnnotationComposer a) f,
+  ) {
+    final $$TrackPrefsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trackPrefs,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackPrefsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.trackPrefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShowsTableTableManager
@@ -2497,7 +3346,7 @@ class $$ShowsTableTableManager
           $$ShowsTableUpdateCompanionBuilder,
           (Show, $$ShowsTableReferences),
           Show,
-          PrefetchHooks Function({bool episodesRefs})
+          PrefetchHooks Function({bool episodesRefs, bool trackPrefsRefs})
         > {
   $$ShowsTableTableManager(_$AppDatabase db, $ShowsTable table)
     : super(
@@ -2570,33 +3419,61 @@ class $$ShowsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({episodesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (episodesRefs) db.episodes],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (episodesRefs)
-                    await $_getPrefetchedDataByColumns<
-                      Show,
-                      $ShowsTable,
-                      Episode,
-                      $EpisodesTable
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ShowsTableReferences
-                          ._episodesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$ShowsTableReferences(db, table, p0).episodesRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'show_id',
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({episodesRefs = false, trackPrefsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (episodesRefs) db.episodes,
+                    if (trackPrefsRefs) db.trackPrefs,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (episodesRefs)
+                        await $_getPrefetchedDataByColumns<
+                          Show,
+                          $ShowsTable,
+                          Episode,
+                          $EpisodesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShowsTableReferences
+                              ._episodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).episodesRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'show_id',
+                          typedResults: items,
+                        ),
+                      if (trackPrefsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          Show,
+                          $ShowsTable,
+                          TrackPref,
+                          $TrackPrefsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShowsTableReferences
+                              ._trackPrefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).trackPrefsRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'show_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2613,7 +3490,7 @@ typedef $$ShowsTableProcessedTableManager =
       $$ShowsTableUpdateCompanionBuilder,
       (Show, $$ShowsTableReferences),
       Show,
-      PrefetchHooks Function({bool episodesRefs})
+      PrefetchHooks Function({bool episodesRefs, bool trackPrefsRefs})
     >;
 typedef $$EpisodesTableCreateCompanionBuilder = EpisodesCompanion Function({
   Value<int> id,
@@ -2631,6 +3508,7 @@ typedef $$EpisodesTableCreateCompanionBuilder = EpisodesCompanion Function({
   Value<String?> stillFile,
   Value<bool> missing,
   Value<bool> manual,
+  Value<bool> metaSkip,
   Value<DateTime> addedAt,
   Value<int> positionMs,
   Value<int> durationMs,
@@ -2653,6 +3531,7 @@ typedef $$EpisodesTableUpdateCompanionBuilder = EpisodesCompanion Function({
   Value<String?> stillFile,
   Value<bool> missing,
   Value<bool> manual,
+  Value<bool> metaSkip,
   Value<DateTime> addedAt,
   Value<int> positionMs,
   Value<int> durationMs,
@@ -2770,6 +3649,11 @@ class $$EpisodesTableFilterComposer
 
   ColumnFilters<bool> get manual => $composableBuilder(
     column: $table.manual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get metaSkip => $composableBuilder(
+    column: $table.metaSkip,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2919,6 +3803,11 @@ class $$EpisodesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get metaSkip => $composableBuilder(
+    column: $table.metaSkip,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
@@ -3041,6 +3930,9 @@ class $$EpisodesTableAnnotationComposer
   GeneratedColumn<bool> get manual =>
       $composableBuilder(column: $table.manual, builder: (column) => column);
 
+  GeneratedColumn<bool> get metaSkip =>
+      $composableBuilder(column: $table.metaSkip, builder: (column) => column);
+
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
@@ -3152,6 +4044,7 @@ class $$EpisodesTableTableManager
                 Value<String?> stillFile = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
+                Value<bool> metaSkip = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<int> positionMs = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
@@ -3173,6 +4066,7 @@ class $$EpisodesTableTableManager
                 stillFile: stillFile,
                 missing: missing,
                 manual: manual,
+                metaSkip: metaSkip,
                 addedAt: addedAt,
                 positionMs: positionMs,
                 durationMs: durationMs,
@@ -3196,6 +4090,7 @@ class $$EpisodesTableTableManager
                 Value<String?> stillFile = const Value.absent(),
                 Value<bool> missing = const Value.absent(),
                 Value<bool> manual = const Value.absent(),
+                Value<bool> metaSkip = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<int> positionMs = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
@@ -3217,6 +4112,7 @@ class $$EpisodesTableTableManager
                 stillFile: stillFile,
                 missing: missing,
                 manual: manual,
+                metaSkip: metaSkip,
                 addedAt: addedAt,
                 positionMs: positionMs,
                 durationMs: durationMs,
@@ -3300,6 +4196,521 @@ typedef $$EpisodesTableProcessedTableManager =
       Episode,
       PrefetchHooks Function({bool folderId, bool showId})
     >;
+typedef $$TrackPrefsTableCreateCompanionBuilder = TrackPrefsCompanion Function({
+  Value<int> showId,
+  Value<String> audioMode,
+  Value<String?> audioLang,
+  Value<String?> audioTitle,
+  Value<String> subMode,
+  Value<String?> subLang,
+  Value<String?> subTitle,
+  Value<bool> subExternal,
+});
+typedef $$TrackPrefsTableUpdateCompanionBuilder = TrackPrefsCompanion Function({
+  Value<int> showId,
+  Value<String> audioMode,
+  Value<String?> audioLang,
+  Value<String?> audioTitle,
+  Value<String> subMode,
+  Value<String?> subLang,
+  Value<String?> subTitle,
+  Value<bool> subExternal,
+});
+
+final class $$TrackPrefsTableReferences
+    extends BaseReferences<_$AppDatabase, $TrackPrefsTable, TrackPref> {
+  $$TrackPrefsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShowsTable _showIdTable(_$AppDatabase db) =>
+      db.shows.createAlias('track_prefs__show_id__shows__id');
+
+  $$ShowsTableProcessedTableManager get showId {
+    final $_column = $_itemColumn<int>('show_id')!;
+
+    final manager = $$ShowsTableTableManager(
+      $_db,
+      $_db.shows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_showIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TrackPrefsTableFilterComposer
+    extends Composer<_$AppDatabase, $TrackPrefsTable> {
+  $$TrackPrefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get audioMode => $composableBuilder(
+    column: $table.audioMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get audioLang => $composableBuilder(
+    column: $table.audioLang,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get audioTitle => $composableBuilder(
+    column: $table.audioTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subMode => $composableBuilder(
+    column: $table.subMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subLang => $composableBuilder(
+    column: $table.subLang,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subTitle => $composableBuilder(
+    column: $table.subTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get subExternal => $composableBuilder(
+    column: $table.subExternal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShowsTableFilterComposer get showId {
+    final $$ShowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableFilterComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackPrefsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrackPrefsTable> {
+  $$TrackPrefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get audioMode => $composableBuilder(
+    column: $table.audioMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get audioLang => $composableBuilder(
+    column: $table.audioLang,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get audioTitle => $composableBuilder(
+    column: $table.audioTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subMode => $composableBuilder(
+    column: $table.subMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subLang => $composableBuilder(
+    column: $table.subLang,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subTitle => $composableBuilder(
+    column: $table.subTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get subExternal => $composableBuilder(
+    column: $table.subExternal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShowsTableOrderingComposer get showId {
+    final $$ShowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackPrefsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrackPrefsTable> {
+  $$TrackPrefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get audioMode =>
+      $composableBuilder(column: $table.audioMode, builder: (column) => column);
+
+  GeneratedColumn<String> get audioLang =>
+      $composableBuilder(column: $table.audioLang, builder: (column) => column);
+
+  GeneratedColumn<String> get audioTitle => $composableBuilder(
+    column: $table.audioTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subMode =>
+      $composableBuilder(column: $table.subMode, builder: (column) => column);
+
+  GeneratedColumn<String> get subLang =>
+      $composableBuilder(column: $table.subLang, builder: (column) => column);
+
+  GeneratedColumn<String> get subTitle =>
+      $composableBuilder(column: $table.subTitle, builder: (column) => column);
+
+  GeneratedColumn<bool> get subExternal => $composableBuilder(
+    column: $table.subExternal,
+    builder: (column) => column,
+  );
+
+  $$ShowsTableAnnotationComposer get showId {
+    final $$ShowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackPrefsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrackPrefsTable,
+          TrackPref,
+          $$TrackPrefsTableFilterComposer,
+          $$TrackPrefsTableOrderingComposer,
+          $$TrackPrefsTableAnnotationComposer,
+          $$TrackPrefsTableCreateCompanionBuilder,
+          $$TrackPrefsTableUpdateCompanionBuilder,
+          (TrackPref, $$TrackPrefsTableReferences),
+          TrackPref,
+          PrefetchHooks Function({bool showId})
+        > {
+  $$TrackPrefsTableTableManager(_$AppDatabase db, $TrackPrefsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackPrefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackPrefsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackPrefsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> showId = const Value.absent(),
+                Value<String> audioMode = const Value.absent(),
+                Value<String?> audioLang = const Value.absent(),
+                Value<String?> audioTitle = const Value.absent(),
+                Value<String> subMode = const Value.absent(),
+                Value<String?> subLang = const Value.absent(),
+                Value<String?> subTitle = const Value.absent(),
+                Value<bool> subExternal = const Value.absent(),
+              }) => TrackPrefsCompanion(
+                showId: showId,
+                audioMode: audioMode,
+                audioLang: audioLang,
+                audioTitle: audioTitle,
+                subMode: subMode,
+                subLang: subLang,
+                subTitle: subTitle,
+                subExternal: subExternal,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> showId = const Value.absent(),
+                Value<String> audioMode = const Value.absent(),
+                Value<String?> audioLang = const Value.absent(),
+                Value<String?> audioTitle = const Value.absent(),
+                Value<String> subMode = const Value.absent(),
+                Value<String?> subLang = const Value.absent(),
+                Value<String?> subTitle = const Value.absent(),
+                Value<bool> subExternal = const Value.absent(),
+              }) => TrackPrefsCompanion.insert(
+                showId: showId,
+                audioMode: audioMode,
+                audioLang: audioLang,
+                audioTitle: audioTitle,
+                subMode: subMode,
+                subLang: subLang,
+                subTitle: subTitle,
+                subExternal: subExternal,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TrackPrefsTable, TrackPref>(table),
+                  $$TrackPrefsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({showId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (showId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.showId,
+                        referencedTable: $$TrackPrefsTableReferences
+                            ._showIdTable(db),
+                        referencedColumn: $$TrackPrefsTableReferences
+                            ._showIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TrackPrefsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrackPrefsTable,
+      TrackPref,
+      $$TrackPrefsTableFilterComposer,
+      $$TrackPrefsTableOrderingComposer,
+      $$TrackPrefsTableAnnotationComposer,
+      $$TrackPrefsTableCreateCompanionBuilder,
+      $$TrackPrefsTableUpdateCompanionBuilder,
+      (TrackPref, $$TrackPrefsTableReferences),
+      TrackPref,
+      PrefetchHooks Function({bool showId})
+    >;
+typedef $$AppSettingsTableCreateCompanionBuilder =
+    AppSettingsCompanion Function({
+      required String key,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$AppSettingsTableUpdateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<String> key,
+      Value<String> value,
+      Value<int> rowid,
+    });
+
+class $$AppSettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AppSettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$AppSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AppSettingsTable,
+          AppSetting,
+          $$AppSettingsTableFilterComposer,
+          $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
+          $$AppSettingsTableCreateCompanionBuilder,
+          $$AppSettingsTableUpdateCompanionBuilder,
+          (
+            AppSetting,
+            BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>,
+          ),
+          AppSetting,
+          PrefetchHooks Function()
+        > {
+  $$AppSettingsTableTableManager(_$AppDatabase db, $AppSettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => AppSettingsCompanion(key: key, value: value, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => AppSettingsCompanion.insert(
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AppSettingsTable, AppSetting>(table),
+                  BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AppSettingsTable,
+      AppSetting,
+      $$AppSettingsTableFilterComposer,
+      $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
+      $$AppSettingsTableCreateCompanionBuilder,
+      $$AppSettingsTableUpdateCompanionBuilder,
+      (
+        AppSetting,
+        BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>,
+      ),
+      AppSetting,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3310,4 +4721,8 @@ class $AppDatabaseManager {
       $$ShowsTableTableManager(_db, _db.shows);
   $$EpisodesTableTableManager get episodes =>
       $$EpisodesTableTableManager(_db, _db.episodes);
+  $$TrackPrefsTableTableManager get trackPrefs =>
+      $$TrackPrefsTableTableManager(_db, _db.trackPrefs);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db, _db.appSettings);
 }

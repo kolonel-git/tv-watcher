@@ -15,13 +15,21 @@ void main() {
     showId = await db.upsertShow('Show', 'show', null);
     ids = [];
     for (final (s, e) in [(1, 1), (1, 2), (1, 3), (2, 1)]) {
-      ids.add(await db.into(db.episodes).insert(EpisodesCompanion.insert(
-            filePath: r'C:\m\S' '${s}E$e.mkv',
-            folderId: folderId,
-            showId: Value(showId),
-            season: Value(s),
-            episode: Value(e),
-          )));
+      ids.add(
+        await db
+            .into(db.episodes)
+            .insert(
+              EpisodesCompanion.insert(
+                filePath:
+                    r'C:\m\S'
+                    '${s}E$e.mkv',
+                folderId: folderId,
+                showId: Value(showId),
+                season: Value(s),
+                episode: Value(e),
+              ),
+            ),
+      );
     }
   });
   tearDown(() => db.close());
@@ -76,21 +84,25 @@ void main() {
 
   test('rescan-style updates do not erase watch state', () async {
     await db.saveProgress(ids[0], positionMs: 400000, durationMs: 1000000);
-    await (db.update(db.episodes)..where((e) => e.id.equals(ids[0])))
-        .write(const EpisodesCompanion(title: Value('New title')));
+    await (db.update(db.episodes)..where((e) => e.id.equals(ids[0]))).write(
+      const EpisodesCompanion(title: Value('New title')),
+    );
     expect((await ep(ids[0])).positionMs, 400000);
   });
 
-  test('episodesOfShow excludes missing files, so autoplay skips them',
-      () async {
-    await (db.update(db.episodes)..where((e) => e.id.equals(ids[1])))
-        .write(const EpisodesCompanion(missing: Value(true)));
-    final list = await db.episodesOfShow(showId);
-    expect(list.map((e) => e.id), isNot(contains(ids[1])));
-    final current = list.firstWhere((e) => e.id == ids[0]);
-    final next = nextInOrder(list.map(episodeRef), episodeRef(current))!;
-    expect(next.id, ids[2]); // S1E1 -> S1E3, missing S1E2 skipped
-  });
+  test(
+    'episodesOfShow excludes missing files, so autoplay skips them',
+    () async {
+      await (db.update(db.episodes)..where((e) => e.id.equals(ids[1]))).write(
+        const EpisodesCompanion(missing: Value(true)),
+      );
+      final list = await db.episodesOfShow(showId);
+      expect(list.map((e) => e.id), isNot(contains(ids[1])));
+      final current = list.firstWhere((e) => e.id == ids[0]);
+      final next = nextInOrder(list.map(episodeRef), episodeRef(current))!;
+      expect(next.id, ids[2]); // S1E1 -> S1E3, missing S1E2 skipped
+    },
+  );
 
   group('continue watching stream', () {
     test('empty before anything is played', () async {
@@ -104,13 +116,15 @@ void main() {
       expect(items.single.resumeMs, 321000);
     });
 
-    test('after finishing an episode, offers the next one from the start',
-        () async {
-      await db.saveProgress(ids[0], positionMs: 990000, durationMs: 1000000);
-      final items = await db.watchContinueWatching().first;
-      expect(items.single.episode.id, ids[1]);
-      expect(items.single.resumeMs, 0);
-    });
+    test(
+      'after finishing an episode, offers the next one from the start',
+      () async {
+        await db.saveProgress(ids[0], positionMs: 990000, durationMs: 1000000);
+        final items = await db.watchContinueWatching().first;
+        expect(items.single.episode.id, ids[1]);
+        expect(items.single.resumeMs, 0);
+      },
+    );
 
     test('season rollover and finished show disappears', () async {
       await db.setSeasonWatched(showId, 1, true);
@@ -131,19 +145,27 @@ void main() {
     test('most recently watched show first', () async {
       final other = await db.upsertShow('Other', 'other', null);
       final folder = (await db.select(db.libraryFolders).get()).single.id;
-      final oid = await db.into(db.episodes).insert(EpisodesCompanion.insert(
-            filePath: r'C:\m\other.mkv',
-            folderId: folder,
-            showId: Value(other),
-            season: const Value(1),
-            episode: const Value(1),
-          ));
+      final oid = await db
+          .into(db.episodes)
+          .insert(
+            EpisodesCompanion.insert(
+              filePath: r'C:\m\other.mkv',
+              folderId: folder,
+              showId: Value(other),
+              season: const Value(1),
+              episode: const Value(1),
+            ),
+          );
       await db.saveProgress(ids[1], positionMs: 100000, durationMs: 1000000);
       await db.saveProgress(oid, positionMs: 100000, durationMs: 1000000);
       // Drift stores whole seconds; make the order explicit.
-      await (db.update(db.episodes)..where((e) => e.id.equals(ids[1])))
-          .write(EpisodesCompanion(
-              lastPlayedAt: Value(DateTime.now().subtract(const Duration(minutes: 5)))));
+      await (db.update(db.episodes)..where((e) => e.id.equals(ids[1]))).write(
+        EpisodesCompanion(
+          lastPlayedAt: Value(
+            DateTime.now().subtract(const Duration(minutes: 5)),
+          ),
+        ),
+      );
       final items = await db.watchContinueWatching().first;
       expect(items.map((i) => i.show.name), ['Other', 'Show']);
     });
