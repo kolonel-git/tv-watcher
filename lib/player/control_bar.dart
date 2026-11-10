@@ -117,7 +117,10 @@ class ControlBar extends StatelessWidget {
                 style: _btnStyle,
                 tooltip: 'Back ${config.seekStep.inSeconds}s (←)',
                 iconSize: _iconSize,
-                icon: const Icon(Icons.replay_10_rounded),
+                icon: SeekIcon(
+                  seconds: config.seekStep.inSeconds,
+                  forward: false,
+                ),
                 onPressed: () => onSeekBy(-config.seekStep),
               ),
               StreamBuilder<bool>(
@@ -138,7 +141,10 @@ class ControlBar extends StatelessWidget {
                 style: _btnStyle,
                 tooltip: 'Forward ${config.seekStep.inSeconds}s (→)',
                 iconSize: _iconSize,
-                icon: const Icon(Icons.forward_10_rounded),
+                icon: SeekIcon(
+                  seconds: config.seekStep.inSeconds,
+                  forward: true,
+                ),
                 onPressed: () => onSeekBy(config.seekStep),
               ),
               if (onNext != null)
@@ -219,6 +225,43 @@ class ControlBar extends StatelessWidget {
                 onPressed: onFullscreen,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Circular-arrow seek icon showing the actual step, so it stays correct when
+/// the skip step is changed in settings (the built-in replay_10 icons are
+/// fixed at 10).
+class SeekIcon extends StatelessWidget {
+  const SeekIcon({super.key, required this.seconds, required this.forward});
+  final int seconds;
+  final bool forward;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 24.0;
+    final arrow = Icon(Icons.replay_rounded, size: size);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          forward ? Transform.flip(flipX: true, child: arrow) : arrow,
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '$seconds',
+              key: const Key('seek-seconds'),
+              style: const TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ),
           ),
         ],
       ),
