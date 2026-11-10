@@ -19,6 +19,7 @@ Tokens live in [lib/ui/theme.dart](lib/ui/theme.dart) (`Ui`, `buildTheme()`); us
 - Subtitles: a text overlay (`SubtitleLayer`) above the control bar; drag anywhere (x and y), double-click resets, position saved. Flutter rule: `Positioned` must be a direct Stack child, never under a builder.
 - Controls: icon size 24 (play 32), always with a tooltip; the control bar auto-hides after 3 s.
 - Show page: season chips (up to 6 seasons, dropdown beyond), visible Select button, inline watched toggle on each episode, grouped overflow menu.
+- Player Playback page: chips for speed and aspect, a `-` value `+` stepper per delay (tap the value to zero it), a hardware decoding switch, and a reset button. Changes are confirmed by a small message at the top of the video.
 - Settings: one centered column (max 760 px) of titled sections; each row has a label, optional one-line help and a control on the right (switch, 260 px dropdown, 280 px slider). Dependent rows dim while their switch is off. Changes save immediately; there is no Save button.
 - Home: wordmark, search, sort, unsorted shortcut (when files wait), Library menu.
 

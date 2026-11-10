@@ -20,6 +20,7 @@ import 'mpv_properties.dart';
 import 'next_episode_card.dart';
 import 'player_config.dart';
 import 'player_panel.dart';
+import 'playback_options.dart';
 import 'player_shortcuts.dart';
 import 'progress_gate.dart';
 import 'subtitle_overlay.dart';
@@ -94,6 +95,14 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
   Timer? _saveTimer;
   Timer? _countdownTimer;
   Timer? _volumeSaveTimer;
+  Timer? _flashTimer;
+
+  // --- per-viewing tweaks (speed, delays, aspect) and hardware decoding ---
+  PlaybackOptions _opts = PlaybackOptions.defaults;
+  late bool _hwdec = _settings.hardwareDecoding;
+
+  /// Short message shown over the video ('Speed 1.5x').
+  String? _flash;
 
   // --- episode context (library playback only) ---
   int? _episodeId;
@@ -136,6 +145,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     _episodeId = widget.episodeId;
     _title = widget.title;
     _placement.addListener(_onPlacementChanged);
+    _mpv.set('hwdec', _hwdec ? 'auto-safe' : 'no');
     _player.stream.volume.listen((_) => setState(() {}));
     _loadSettings();
     _player.stream.playing.listen((playing) {
@@ -249,6 +259,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
 
   void _openMedia(String path, {Duration? start}) {
     _gate.begin(start);
+    _applyOptions(_opts.forNewFile());
     _tracksApplied = false;
     _externalList = const [];
     _externalSubs = findExternalSubtitles(path).then((list) {
@@ -564,6 +575,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     _gate.dispose();
     _countdownTimer?.cancel();
     _hideTimer?.cancel();
+    _flashTimer?.cancel();
     if (_volumeSaveTimer?.isActive ?? false) {
       _volumeSaveTimer!.cancel();
       widget.db?.setSetting(settingVolume, _player.state.volume.toString());
@@ -645,6 +657,67 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     } else {
       _openPanel(PanelPage.shortcuts);
     }
+  }
+
+  @override
+  void speedDown() => _applyOptions(
+    _opts.slower(),
+    flash: (o) => 'Speed ${PlaybackOptions.speedLabel(o.speed)}',
+  );
+
+  @override
+  void speedUp() => _applyOptions(
+    _opts.faster(),
+    flash: (o) => 'Speed ${PlaybackOptions.speedLabel(o.speed)}',
+  );
+
+  @override
+  void subtitleDelay(int direction) => _applyOptions(
+    _opts.copyWith(
+      subtitleDelayMs:
+          _opts.subtitleDelayMs + direction * PlaybackOptions.delayStepMs,
+    ),
+    flash: (o) =>
+        'Subtitle delay ${PlaybackOptions.delayLabel(o.subtitleDelayMs)}',
+  );
+
+  /// Makes [next] the current options and sends the changed ones to mpv.
+  void _applyOptions(
+    PlaybackOptions next, {
+    String Function(PlaybackOptions)? flash,
+  }) {
+    final prev = _opts;
+    if (mounted) {
+      setState(() => _opts = next);
+    } else {
+      _opts = next;
+    }
+    if (next.speed != prev.speed) _player.setRate(next.speed);
+    if (next.subtitleDelayMs != prev.subtitleDelayMs) {
+      _mpv.set('sub-delay', PlaybackOptions.delaySeconds(next.subtitleDelayMs));
+    }
+    if (next.audioDelayMs != prev.audioDelayMs) {
+      _mpv.set('audio-delay', PlaybackOptions.delaySeconds(next.audioDelayMs));
+    }
+    if (next.aspect.mpvValue != prev.aspect.mpvValue) {
+      _mpv.set('video-aspect-override', next.aspect.mpvValue);
+    }
+    if (flash != null && next != prev) _showFlash(flash(next));
+  }
+
+  void _showFlash(String text) {
+    _flashTimer?.cancel();
+    setState(() => _flash = text);
+    _flashTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _flash = null);
+    });
+  }
+
+  void _setHardwareDecoding(bool on) {
+    setState(() => _hwdec = on);
+    _mpv.set('hwdec', on ? 'auto-safe' : 'no');
+    final c = SettingsScope.controllerOf(context);
+    c?.update(c.value.copyWith(hardwareDecoding: on));
   }
 
   @override
@@ -794,6 +867,28 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     );
   }
 
+  Widget _buildFlash() {
+    return Positioned(
+      top: 72,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            key: const Key('player-flash'),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Ui.scrim,
+              borderRadius: BorderRadius.circular(Ui.rMd),
+              border: Border.all(color: Ui.outline),
+            ),
+            child: Text(_flash!, style: Theme.of(context).textTheme.titleSmall),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPanel() {
     return Positioned(
       right: Ui.s4,
@@ -810,6 +905,10 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
         subtitleStyle: _subStyle,
         onStyleChanged: (st) => setState(() => _subStyle = st),
         onResetPosition: _resetSubPosition,
+        playbackOptions: _opts,
+        onPlaybackOptions: (o) => _applyOptions(o),
+        hardwareDecoding: _hwdec,
+        onHardwareDecoding: _setHardwareDecoding,
       ),
     );
   }
@@ -850,6 +949,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
                   onDoubleTap: toggleFullscreen,
                   child: Video(
                     controller: _video,
+                    fit: _opts.aspect.fit,
                     controls: NoVideoControls,
                     subtitleViewConfiguration: const SubtitleViewConfiguration(
                       visible: false,
@@ -899,6 +999,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
                 // can always be grabbed and dragged, bar visible or not.
                 if (_hasMedia && !_bitmapSub) _buildSubtitles(),
                 if (_hasMedia && _panel != null) _buildPanel(),
+                if (_flash != null) _buildFlash(),
                 if (_autoplay.showing && _next != null)
                   Positioned(
                     right: 24,

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show DatabaseConnection, Value;
+﻿import 'package:drift/drift.dart' show DatabaseConnection, Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -293,7 +293,7 @@ void main() {
     tearDown(() => db.close());
 
     void bigScreen(WidgetTester t) {
-      t.view.physicalSize = const Size(1400, 1600);
+      t.view.physicalSize = const Size(1400, 2600);
       t.view.devicePixelRatio = 1;
       addTearDown(t.view.reset);
     }
@@ -306,7 +306,7 @@ void main() {
     testWidgets('settings page toggles and persists a switch', (t) async {
       bigScreen(t);
       final c = SettingsController.memory(db);
-      await t.pumpWidget(scoped(c, const SettingsPage()));
+      await t.pumpWidget(scoped(c, SettingsPage(db: db)));
       await settle(t);
       expect(find.text('Autoplay next episode'), findsOneWidget);
       expect(c.value.autoplay, isTrue);
@@ -324,7 +324,7 @@ void main() {
         db,
         const UserSettings(autoplay: false),
       );
-      await t.pumpWidget(scoped(c, const SettingsPage()));
+      await t.pumpWidget(scoped(c, SettingsPage(db: db)));
       await settle(t);
       final ignore = t.widget<IgnorePointer>(
         find
@@ -343,7 +343,7 @@ void main() {
         db,
         const UserSettings(watchedPercent: 80, showMissing: true),
       );
-      await t.pumpWidget(scoped(c, const SettingsPage()));
+      await t.pumpWidget(scoped(c, SettingsPage(db: db)));
       await settle(t);
 
       await t.ensureVisible(find.text('Reset all settings'));
@@ -364,7 +364,7 @@ void main() {
     testWidgets('without a scope the page says settings are unavailable', (
       t,
     ) async {
-      await t.pumpWidget(const MaterialApp(home: SettingsPage()));
+      await t.pumpWidget(MaterialApp(home: SettingsPage(db: db)));
       expect(find.text('Settings are not available.'), findsOneWidget);
     });
 

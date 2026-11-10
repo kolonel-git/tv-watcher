@@ -29,6 +29,12 @@ class _Fake implements PlayerCommands {
   void toggleShortcutHelp() => calls.add('help');
   @override
   void escape() => calls.add('esc');
+  @override
+  void speedDown() => calls.add('slower');
+  @override
+  void speedUp() => calls.add('faster');
+  @override
+  void subtitleDelay(int d) => calls.add('subdelay$d');
 }
 
 void main() {
@@ -66,6 +72,15 @@ void main() {
         'audio',
         'next',
       ]);
+    });
+
+    test('speed and subtitle delay keys', () {
+      final f = _Fake();
+      s.dispatch(LogicalKeyboardKey.bracketLeft, '[', f);
+      s.dispatch(LogicalKeyboardKey.bracketRight, ']', f);
+      s.dispatch(LogicalKeyboardKey.keyZ, 'z', f);
+      s.dispatch(LogicalKeyboardKey.keyX, 'x', f);
+      expect(f.calls, ['slower', 'faster', 'subdelay-1', 'subdelay1']);
     });
 
     test('? opens help; unknown keys are not handled', () {

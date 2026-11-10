@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../ui/theme.dart';
+import 'playback_options.dart';
+import 'playback_page.dart';
 import 'subtitle_style.dart';
 
-enum PanelPage { root, subtitles, audio, appearance, shortcuts }
+enum PanelPage { root, subtitles, audio, playback, appearance, shortcuts }
+
+void _ignoreOptions(PlaybackOptions _) {}
+void _ignoreSwitch(bool _) {}
 
 /// One selectable row in the subtitle / audio lists.
 class PanelOption {
@@ -29,6 +34,8 @@ const shortcutList = <(String, String)>[
   ('V', 'Cycle subtitles'),
   ('B', 'Cycle audio'),
   ('O', 'Open a file'),
+  ('[  ]', 'Speed down / up'),
+  ('Z  X', 'Subtitle delay earlier / later'),
   ('?', 'This list'),
   ('Esc', 'Close panel, leave fullscreen, go back'),
 ];
@@ -50,6 +57,10 @@ class PlayerPanel extends StatelessWidget {
     required this.subtitleStyle,
     required this.onStyleChanged,
     required this.onResetPosition,
+    this.playbackOptions = PlaybackOptions.defaults,
+    this.onPlaybackOptions = _ignoreOptions,
+    this.hardwareDecoding = true,
+    this.onHardwareDecoding = _ignoreSwitch,
   });
 
   final PanelPage page;
@@ -63,11 +74,16 @@ class PlayerPanel extends StatelessWidget {
   final SubtitleStyle subtitleStyle;
   final ValueChanged<SubtitleStyle> onStyleChanged;
   final VoidCallback onResetPosition;
+  final PlaybackOptions playbackOptions;
+  final ValueChanged<PlaybackOptions> onPlaybackOptions;
+  final bool hardwareDecoding;
+  final ValueChanged<bool> onHardwareDecoding;
 
   static String title(PanelPage p) => switch (p) {
     PanelPage.root => 'Settings',
     PanelPage.subtitles => 'Subtitles',
     PanelPage.audio => 'Audio',
+    PanelPage.playback => 'Playback',
     PanelPage.appearance => 'Subtitle settings',
     PanelPage.shortcuts => 'Keyboard shortcuts',
   };
@@ -126,6 +142,12 @@ class PlayerPanel extends StatelessWidget {
                       ],
                     ),
                     PanelPage.audio => _options(audioOptions),
+                    PanelPage.playback => PlaybackPanelPage(
+                      options: playbackOptions,
+                      onOptions: onPlaybackOptions,
+                      hardwareDecoding: hardwareDecoding,
+                      onHardwareDecoding: onHardwareDecoding,
+                    ),
                     PanelPage.appearance => SubtitleSettingsPanel(
                       initial: subtitleStyle,
                       onChanged: onStyleChanged,
@@ -159,6 +181,13 @@ class PlayerPanel extends StatelessWidget {
         label: 'Audio',
         value: currentAudio,
         onTap: () => onPage(PanelPage.audio),
+      ),
+      _Row(
+        icon: Icons.speed_rounded,
+        chevron: true,
+        label: 'Playback',
+        value: PlaybackOptions.speedLabel(playbackOptions.speed),
+        onTap: () => onPage(PanelPage.playback),
       ),
       const Divider(height: Ui.s4),
       _Row(

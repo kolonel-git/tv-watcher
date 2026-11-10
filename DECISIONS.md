@@ -59,3 +59,30 @@ A drag is one database write, not dozens. Dropdown controls are 260 px wide with
 
 ## D19 Testing note: the Ahem test font
 `flutter_test` draws text 14 px per character, so existing menu rows overflow when a test opens them. A test that must open such a menu shrinks the text scale instead of weakening the overflow check.
+
+## D20 Playback tweaks are per viewing, not saved (9b-2)
+Speed, subtitle delay, audio delay and aspect live in `PlaybackOptions` and are not stored. Speed carries across episodes of one viewing (binge at 1.25x); delays and aspect belong to one file's timing and shape, so they reset when a new file opens. Speed ladder 0.5-2x on `[` / `]`; delays step 0.1 s and are capped at +-30 s.
+
+## D21 Aspect ratio: mpv override, plus Zoom (9b-2)
+16:9, 4:3 and 21:9 use mpv's `video-aspect-override`; "Auto" removes it. "Zoom to fill" crops to fill the window by using `BoxFit.cover` on the video widget (mpv has no equivalent that works with the texture renderer). No stretch mode: distorted pictures are never wanted.
+
+## D22 Subtitle delay on Z/X, audio delay in the panel only (9b-2)
+Z (earlier) and X (later) follow mpv's convention. Audio delay is rarely needed, so it only has a stepper in the Playback page; no key was spent on it. A short on-screen message confirms speed and subtitle-delay changes.
+
+## D23 Hardware decoding: a saved setting with a live switch (9b-2)
+Default on (`auto-safe`). The switch is in Settings and in the player's Playback page and takes effect immediately: verified against libmpv that `hwdec-current` flips between `d3d11va-copy` and `no` mid-playback. The player applies the saved value before opening a file.
+
+## D24 Backup format (9b-2)
+JSON, `format: tv-watcher-backup`, `formatVersion: 1`. Contains watch progress per episode (identified by file path, so it survives a rebuilt library) and the whitelisted settings keys (`settings.*`, `player.*`). Never contains the TMDB token (it is in `.env`, not the database), media files, artwork, or per-show subtitle/audio choices (left out of v1 to keep the file simple; can be added under a new formatVersion). Restore rule: per episode the newer last-played time wins, so an old backup cannot erase newer progress; entries marked watched by hand (no play time) only fill episodes with no progress; settings in the backup replace the current ones.
+
+## D25 Backup files are untrusted input (9b-2)
+`BackupFile.parse` is pure and strict: wrong format or a newer formatVersion is rejected, malformed entries are skipped (not fatal), only whitelisted key prefixes with bounded length/size are kept, at most 200,000 episodes are read, files over 20 MB are refused before reading, and parsing never touches the database. A confirmation dialog shows what will be restored before anything is written.
+
+## D26 OS actions behind a `DataActions` interface (9b-2)
+File save/open dialogs and Explorer are in `PlatformDataActions`; the settings screen takes a `DataActions`, so tests use a fake and never open real dialogs. "Open data folder" opens the documents folder, where drift_flutter keeps `tv_watcher.sqlite`.
+
+## D27 Version has one source in code, checked against pubspec (9b-2)
+`lib/app_info.dart` holds name, version and build for About and for backups; a test fails if it differs from `version:` in pubspec.yaml. Chosen over adding the `package_info_plus` dependency for a single string.
+
+## D28 libmpv property names verified live (9b-2)
+A throwaway entry point set each property on a real player and read it back: `speed` 1.5, `sub-delay` -0.3, `audio-delay` 0.2, `video-aspect-override` 16:9 -> 1.777778 and back to -1, `hwdec` no <-> auto-safe. The entry point was deleted afterwards.

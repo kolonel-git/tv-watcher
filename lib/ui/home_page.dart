@@ -236,7 +236,7 @@ class _HomePageState extends State<HomePage> {
                   case 'file':
                     _push(PlayerPage(db: db));
                   case 'settings':
-                    _push(const SettingsPage());
+                    _push(SettingsPage(db: db));
                 }
               },
               itemBuilder: (_) => const [

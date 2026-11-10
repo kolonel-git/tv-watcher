@@ -336,6 +336,37 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Episodes with any watch state: a resume point, watched, or a play time.
+  /// Used by the backup export.
+  Future<List<Episode>> episodesWithProgress() =>
+      (select(episodes)..where(
+            (e) =>
+                e.positionMs.isBiggerThanValue(0) |
+                e.watched.equals(true) |
+                e.lastPlayedAt.isNotNull(),
+          ))
+          .get();
+
+  Future<Episode?> episodeByPath(String path) => (select(
+    episodes,
+  )..where((e) => e.filePath.equals(path))).getSingleOrNull();
+
+  /// Writes watch state from a backup, as is (no threshold rules).
+  Future<void> restoreProgress(
+    int episodeId, {
+    required int positionMs,
+    required int durationMs,
+    required bool watched,
+    DateTime? lastPlayedAt,
+  }) => (update(episodes)..where((e) => e.id.equals(episodeId))).write(
+    EpisodesCompanion(
+      positionMs: Value(positionMs),
+      durationMs: Value(durationMs),
+      watched: Value(watched),
+      lastPlayedAt: Value(lastPlayedAt),
+    ),
+  );
+
   Future<Episode?> getEpisode(int id) =>
       (select(episodes)..where((e) => e.id.equals(id))).getSingleOrNull();
 

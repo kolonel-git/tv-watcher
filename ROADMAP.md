@@ -115,7 +115,7 @@ Stories:
 **9b-1 — Settings screen — DONE** (see CHANGELOG, DECISIONS D9-D19). Reachable from Home > Library menu > Settings.
 - Settings screen (persisted in DB, DONE in 9b-1): autoplay on/off, lead time and countdown length; skip step (±N s); control-bar hide delay; watched threshold; resume behaviour (always / ask / restart); default volume mode; metadata language (overrides .env); home sort (A–Z, recently added, recently watched); poster size; show/hide specials; show missing files; reset all settings.
 
-**9b-2 — Player options and data** *(next)*
+**9b-2 — Player options and data — DONE** (see CHANGELOG, DECISIONS D20-D28)
 - Player: playback speed ([ ] keys), subtitle delay (Z/X), audio delay, aspect ratio, hardware-decoding toggle, keyboard-shortcut help (?) (DONE in the settings panel).
 - Data (9b-2): export/import watch progress and settings (JSON backup), open data folder, About/version.
 

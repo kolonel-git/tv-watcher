@@ -51,7 +51,11 @@ Output: `build\windows\x64\runner\Release\` (copy the whole folder; it is portab
 | N | Next episode (library playback) |
 | V | Cycle subtitles (off, then each track) |
 | B | Cycle audio tracks |
+| [ / ] | Playback speed down / up |
+| Z / X | Subtitle delay earlier / later (0.1 s) |
 | ? | Shortcut list (settings panel) |
+
+Playback options (speed, aspect ratio, subtitle and audio delay, hardware decoding): settings panel > Playback. Backup and restore, data folder and About: Settings > Data.
 
 Settings (autoplay, skip step, watched threshold, resume behaviour, volume, language, sort, poster size, specials, missing files): Home > Library menu > Settings. Decisions are recorded in [DECISIONS.md](DECISIONS.md).
 
@@ -64,6 +68,8 @@ TMDB Read Access Token: copy `.env.example` to `.env` and set `TMDB_READ_TOKEN` 
 ## Code layout
 
 `lib/settings/`: `user_settings.dart` (the model and its ranges), `settings_controller.dart` (storage and `SettingsScope`). `lib/ui/settings_page.dart` and `settings_widgets.dart` draw the screen.
+
+`lib/data/backup_service.dart` (backup format, parsing, restore) and `data_actions.dart` (file dialogs, Explorer). `lib/app_info.dart` holds the version.
 
 ### Player
 

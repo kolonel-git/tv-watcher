@@ -66,6 +66,13 @@ class SettingsController extends ChangeNotifier {
     }
   }
 
+  /// Re-reads the stored settings (after a backup restore wrote them).
+  Future<void> reload() async {
+    _value = UserSettings.fromMap(await _db.settingsWithPrefix(keyPrefix));
+    _apply();
+    notifyListeners();
+  }
+
   /// Back to defaults; also removes the stored values.
   Future<void> reset() async {
     _value = UserSettings.defaults;

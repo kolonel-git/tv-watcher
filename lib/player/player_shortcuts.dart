@@ -13,6 +13,9 @@ abstract interface class PlayerCommands {
   void cycleAudio();
   void nextEpisode();
   void toggleShortcutHelp();
+  void speedDown();
+  void speedUp();
+  void subtitleDelay(int direction); // -1 earlier, +1 later
 
   /// Esc: close the panel, else leave fullscreen, else go back.
   void escape();
@@ -47,5 +50,9 @@ class PlayerShortcuts {
     LogicalKeyboardKey.keyV: (c) => c.cycleSubtitles(),
     LogicalKeyboardKey.keyB: (c) => c.cycleAudio(),
     LogicalKeyboardKey.keyN: (c) => c.nextEpisode(),
+    LogicalKeyboardKey.bracketLeft: (c) => c.speedDown(),
+    LogicalKeyboardKey.bracketRight: (c) => c.speedUp(),
+    LogicalKeyboardKey.keyZ: (c) => c.subtitleDelay(-1),
+    LogicalKeyboardKey.keyX: (c) => c.subtitleDelay(1),
   };
 }

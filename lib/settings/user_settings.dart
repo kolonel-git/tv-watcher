@@ -77,6 +77,7 @@ class UserSettings {
     this.posterSize = PosterSize.medium,
     this.showSpecials = true,
     this.showMissing = false,
+    this.hardwareDecoding = true,
   });
 
   static const defaults = UserSettings();
@@ -110,6 +111,10 @@ class UserSettings {
   final bool showSpecials;
   final bool showMissing;
 
+  /// Let the GPU decode video. Off falls back to the CPU (slower, but works
+  /// around drivers that glitch).
+  final bool hardwareDecoding;
+
   double get watchedFraction => watchedPercent / 100;
   Duration get skipStep => Duration(seconds: skipStepSeconds);
 
@@ -129,6 +134,7 @@ class UserSettings {
     PosterSize? posterSize,
     bool? showSpecials,
     bool? showMissing,
+    bool? hardwareDecoding,
   }) => UserSettings(
     autoplay: autoplay ?? this.autoplay,
     autoplayLeadSeconds: autoplayLeadSeconds ?? this.autoplayLeadSeconds,
@@ -147,6 +153,7 @@ class UserSettings {
     posterSize: posterSize ?? this.posterSize,
     showSpecials: showSpecials ?? this.showSpecials,
     showMissing: showMissing ?? this.showMissing,
+    hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
   );
 
   /// Flat string map for the key/value settings table.
@@ -165,6 +172,7 @@ class UserSettings {
     'posterSize': posterSize.name,
     'showSpecials': '$showSpecials',
     'showMissing': '$showMissing',
+    'hardwareDecoding': '$hardwareDecoding',
   };
 
   /// Tolerant decode: missing, unparsable or out-of-range fields use the
@@ -211,6 +219,7 @@ class UserSettings {
       posterSize: e('posterSize', PosterSize.values, d.posterSize),
       showSpecials: b('showSpecials', d.showSpecials),
       showMissing: b('showMissing', d.showMissing),
+      hardwareDecoding: b('hardwareDecoding', d.hardwareDecoding),
     );
   }
 

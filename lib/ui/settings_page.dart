@@ -1,5 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
+import '../app_info.dart';
+import '../data/backup_service.dart';
+import '../data/data_actions.dart';
+import '../data/database.dart';
 import '../settings/settings_controller.dart';
 import '../settings/user_settings.dart';
 import 'settings_widgets.dart';
@@ -7,7 +13,15 @@ import 'theme.dart';
 
 /// Settings screen: every [UserSettings] field, saved as soon as it changes.
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({
+    super.key,
+    required this.db,
+    this.actions = const PlatformDataActions(),
+  });
+  final AppDatabase db;
+
+  /// File dialogs and Explorer; replaced in tests.
+  final DataActions actions;
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +32,22 @@ class SettingsPage extends StatelessWidget {
           ? const Center(child: Text('Settings are not available.'))
           : ListenableBuilder(
               listenable: controller,
-              builder: (context, _) => _Body(controller: controller),
+              builder: (context, _) =>
+                  _Body(controller: controller, db: db, actions: actions),
             ),
     );
   }
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.controller});
+  const _Body({
+    required this.controller,
+    required this.db,
+    required this.actions,
+  });
   final SettingsController controller;
+  final AppDatabase db;
+  final DataActions actions;
 
   UserSettings get s => controller.value;
   void _set(UserSettings next) => controller.update(next);
@@ -53,6 +74,78 @@ class _Body extends StatelessWidget {
       ),
     );
     if (ok == true) await controller.reset();
+  }
+
+  void _say(BuildContext context, String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _export(BuildContext context) async {
+    try {
+      final json = await BackupService(db).exportJson();
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      final saved = await actions.saveBackup(
+        'tv-watcher-backup-$stamp.json',
+        utf8.encode(json),
+      );
+      if (context.mounted && saved) _say(context, 'Backup saved.');
+    } catch (e) {
+      if (context.mounted) _say(context, 'Could not save the backup: $e');
+    }
+  }
+
+  Future<void> _import(BuildContext context) async {
+    try {
+      final text = await actions.pickBackup();
+      if (text == null) return;
+      final file = BackupFile.parse(text);
+      if (!context.mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Restore this backup?'),
+          content: Text(
+            '${file.episodes.length} episodes with watch progress and '
+            '${file.settings.length} settings'
+            '${file.exportedAt == null ? '' : ', saved ${file.exportedAt!.toLocal().toString().substring(0, 16)}'}.\n\n'
+            'Where this computer has newer progress for an episode it is kept. '
+            'Settings in the backup replace the current ones.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Restore'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      final report = await BackupService(db).restore(file);
+      await controller.reload();
+      if (context.mounted) {
+        _say(
+          context,
+          'Restored ${report.restored} episodes'
+          '${report.keptLocal > 0 ? ', kept ${report.keptLocal} newer here' : ''}'
+          '${report.notInLibrary > 0 ? ', ${report.notInLibrary} not in this library' : ''}.',
+        );
+      }
+    } on BackupFormatException catch (e) {
+      if (context.mounted) _say(context, e.message);
+    } catch (e) {
+      if (context.mounted) _say(context, 'Could not read the backup: $e');
+    }
+  }
+
+  Future<void> _openFolder(BuildContext context) async {
+    try {
+      await actions.openFolder(await actions.dataFolder());
+    } catch (e) {
+      if (context.mounted) _say(context, 'Could not open the folder: $e');
+    }
   }
 
   @override
@@ -148,6 +241,12 @@ class _Body extends StatelessWidget {
                   enabled: s.volumeMode == VolumeMode.fixed,
                   onChanged: (v) => _set(s.copyWith(fixedVolume: v)),
                 ),
+                SwitchSetting(
+                  title: 'Hardware decoding',
+                  help: 'Let the GPU decode video. Turn off if it stutters.',
+                  value: s.hardwareDecoding,
+                  onChanged: (v) => _set(s.copyWith(hardwareDecoding: v)),
+                ),
               ],
             ),
             SettingsSection(
@@ -189,6 +288,47 @@ class _Body extends StatelessWidget {
                   help: 'List episodes whose file is gone, greyed out.',
                   value: s.showMissing,
                   onChanged: (v) => _set(s.copyWith(showMissing: v)),
+                ),
+              ],
+            ),
+            SettingsSection(
+              title: 'Data',
+              rows: [
+                SettingRow(
+                  title: 'Back up progress and settings',
+                  help: 'Saves a JSON file. No TMDB token, no media files.',
+                  control: OutlinedButton(
+                    onPressed: () => _export(context),
+                    child: const Text('Export...'),
+                  ),
+                ),
+                SettingRow(
+                  title: 'Restore from a backup',
+                  help: 'Keeps newer progress already on this computer.',
+                  control: OutlinedButton(
+                    onPressed: () => _import(context),
+                    child: const Text('Import...'),
+                  ),
+                ),
+                SettingRow(
+                  title: 'Data folder',
+                  help: 'Where the library database is stored.',
+                  control: OutlinedButton(
+                    onPressed: () => _openFolder(context),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ],
+            ),
+            SettingsSection(
+              title: 'About',
+              rows: [
+                SettingRow(
+                  title: '$appName $appVersion (build $appBuild)',
+                  help:
+                      'Local only: no accounts, no telemetry. The only network '
+                      'calls go to TMDB for show information and artwork.',
+                  control: const SizedBox.shrink(),
                 ),
               ],
             ),
