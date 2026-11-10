@@ -3,13 +3,18 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 import '../data/database.dart';
+import '../settings/settings_controller.dart';
+import '../settings/user_settings.dart';
 import '../library/scanner.dart';
 import '../metadata/metadata_service.dart';
 import '../player/player_page.dart';
 import 'continue_row.dart';
 import 'manage_pages.dart';
 import 'poster_card.dart';
+import 'settings_page.dart';
 import 'show_page.dart';
+
+export '../settings/user_settings.dart' show ShowSort;
 
 /// Home: poster grid of all shows. Owns scan + metadata sync orchestration.
 class HomePage extends StatefulWidget {
@@ -28,7 +33,9 @@ class _HomePageState extends State<HomePage> {
   String? _note;
   final TextEditingController _search = TextEditingController();
   String _query = '';
-  ShowSort _sort = ShowSort.name;
+
+  /// Used only when there is no settings scope (widget tests).
+  ShowSort _fallbackSort = ShowSort.name;
 
   @override
   void dispose() {
@@ -108,11 +115,23 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _setSort(ShowSort v) {
+    final c = SettingsScope.controllerOf(context);
+    if (c == null) {
+      setState(() => _fallbackSort = v);
+    } else {
+      c.update(c.value.copyWith(homeSort: v));
+    }
+  }
+
   void _push(Widget page) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final hasScope = SettingsScope.controllerOf(context) != null;
+    final sort = hasScope ? settings.homeSort : _fallbackSort;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
@@ -166,13 +185,13 @@ class _HomePageState extends State<HomePage> {
           PopupMenuButton<ShowSort>(
             tooltip: 'Sort',
             icon: const Icon(Icons.swap_vert_rounded),
-            initialValue: _sort,
-            onSelected: (v) => setState(() => _sort = v),
+            initialValue: sort,
+            onSelected: _setSort,
             itemBuilder: (_) => [
               for (final o in ShowSort.values)
                 CheckedPopupMenuItem(
                   value: o,
-                  checked: o == _sort,
+                  checked: o == sort,
                   child: Text(o.label),
                 ),
             ],
@@ -216,6 +235,8 @@ class _HomePageState extends State<HomePage> {
                     _rescan();
                   case 'file':
                     _push(PlayerPage(db: db));
+                  case 'settings':
+                    _push(const SettingsPage());
                 }
               },
               itemBuilder: (_) => const [
@@ -239,6 +260,10 @@ class _HomePageState extends State<HomePage> {
                     'Play a single file',
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'settings',
+                  child: _MenuRow(Icons.settings_outlined, 'Settings'),
+                ),
               ],
             ),
           const SizedBox(width: Ui.s3),
@@ -260,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                 final shows = snap.data;
                 if (shows == null) return const SizedBox.shrink();
                 if (shows.isEmpty) return _Empty(onAdd: _addFolder);
-                final visible = filterAndSortShows(shows, _query, _sort);
+                final visible = filterAndSortShows(shows, _query, sort);
                 if (visible.isEmpty) {
                   return _NoMatches(
                     query: _query,
@@ -274,6 +299,7 @@ class _HomePageState extends State<HomePage> {
                   db: db,
                   showContinue: _query.isEmpty,
                   total: shows.length,
+                  posterWidth: settings.posterSize.maxWidth,
                   shows: visible,
                   onOpen: (s) => _push(
                     ShowPage(db: db, meta: widget.meta, showId: s.show.id),
@@ -295,7 +321,9 @@ class _ShowGrid extends StatelessWidget {
     required this.onOpen,
     required this.showContinue,
     required this.total,
+    required this.posterWidth,
   });
+  final double posterWidth;
   final AppDatabase db;
   final bool showContinue;
   final int total;
@@ -333,8 +361,8 @@ class _ShowGrid extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           sliver: SliverGrid.builder(
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 200,
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: posterWidth,
               mainAxisSpacing: 24,
               crossAxisSpacing: 20,
               childAspectRatio: 2 / 3.5,
@@ -390,15 +418,6 @@ class _Empty extends StatelessWidget {
   );
 }
 
-enum ShowSort {
-  name('Name, A to Z'),
-  nameDesc('Name, Z to A'),
-  episodes('Most episodes');
-
-  const ShowSort(this.label);
-  final String label;
-}
-
 /// Case-insensitive name filter plus sort. Pure, for the home grid.
 List<ShowWithCount> filterAndSortShows(
   List<ShowWithCount> shows,
@@ -424,9 +443,22 @@ List<ShowWithCount> filterAndSortShows(
       case ShowSort.episodes:
         final c = b.episodeCount.compareTo(a.episodeCount);
         return c != 0 ? c : name(a).compareTo(name(b));
+      case ShowSort.recentlyAdded:
+        return _newestFirst(a.addedAt, b.addedAt, name(a), name(b));
+      case ShowSort.recentlyWatched:
+        return _newestFirst(a.lastPlayedAt, b.lastPlayedAt, name(a), name(b));
     }
   });
   return out;
+}
+
+/// Newest date first; shows with no date go last; ties by name.
+int _newestFirst(DateTime? a, DateTime? b, String nameA, String nameB) {
+  if (a == null && b == null) return nameA.compareTo(nameB);
+  if (a == null) return 1;
+  if (b == null) return -1;
+  final c = b.compareTo(a);
+  return c != 0 ? c : nameA.compareTo(nameB);
 }
 
 class _MenuRow extends StatelessWidget {

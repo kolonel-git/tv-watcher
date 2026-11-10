@@ -95,13 +95,36 @@ class EpisodeCardState extends State<EpisodeCard> {
                     fit: StackFit.expand,
                     children: [
                       Opacity(
-                        opacity: e.watched ? 0.55 : 1,
+                        opacity: e.missing ? 0.3 : (e.watched ? 0.55 : 1),
                         child: ArtworkImage(
                           path: e.stillFile,
                           cacheWidth: 448,
                           placeholderIcon: Icons.movie_outlined,
                         ),
                       ),
+                      if (e.missing)
+                        Positioned(
+                          left: 6,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'File missing',
+                              key: Key('missing-badge'),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Ui.attention,
+                              ),
+                            ),
+                          ),
+                        ),
                       if (e.watched)
                         const Positioned(
                           top: 6,
@@ -125,7 +148,7 @@ class EpisodeCardState extends State<EpisodeCard> {
                           ),
                         ),
                       AnimatedOpacity(
-                        opacity: _hover ? 1 : 0,
+                        opacity: _hover && !e.missing ? 1 : 0,
                         duration: const Duration(milliseconds: 120),
                         child: Container(
                           color: Colors.black45,

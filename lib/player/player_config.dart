@@ -1,3 +1,5 @@
+import '../settings/user_settings.dart';
+
 /// Every tunable number of the player in one immutable place, so nothing is
 /// buried in widget code. Sprint 9b's settings screen will build one of these
 /// from the database instead of using [defaults].
@@ -23,6 +25,12 @@ class PlayerConfig {
   });
 
   static const defaults = PlayerConfig();
+
+  /// Defaults with the user's skip step and control-bar hide delay.
+  factory PlayerConfig.fromSettings(UserSettings s) => PlayerConfig(
+    seekStep: s.skipStep,
+    controlsHideDelay: Duration(seconds: s.controlsHideSeconds),
+  );
 
   /// Arrow-key and button skip size.
   final Duration seekStep;

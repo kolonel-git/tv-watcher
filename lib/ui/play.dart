@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../player/player_page.dart';
+import '../settings/settings_controller.dart';
+import '../settings/user_settings.dart';
 import '../watch/watch_logic.dart';
 
 /// Opens the player for [e], resuming from the saved position unless
@@ -12,9 +14,22 @@ Future<void> openEpisode(
   Show show,
   Episode e, {
   bool fromStart = false,
-}) {
-  final resumeMs = fromStart ? 0 : resumePositionMs(e.positionMs, e.durationMs);
-  return Navigator.push(
+}) async {
+  final settings = SettingsScope.of(context);
+  var resumeMs = fromStart || settings.resume == ResumeBehavior.restart
+      ? 0
+      : resumePositionMs(
+          e.positionMs,
+          e.durationMs,
+          threshold: settings.watchedFraction,
+        );
+  if (resumeMs > 0 && settings.resume == ResumeBehavior.ask) {
+    final resume = await askResume(context, Duration(milliseconds: resumeMs));
+    if (resume == null) return; // dismissed: do not play
+    if (!resume) resumeMs = 0;
+  }
+  if (!context.mounted) return;
+  await Navigator.push(
     context,
     MaterialPageRoute(
       builder: (_) => PlayerPage(
@@ -27,6 +42,27 @@ Future<void> openEpisode(
     ),
   );
 }
+
+/// 'Ask each time' resume behaviour. True = resume, false = start over,
+/// null = dismissed (nothing plays).
+Future<bool?> askResume(BuildContext context, Duration at) => showDialog<bool>(
+  context: context,
+  builder: (_) => AlertDialog(
+    title: const Text('Resume playback?'),
+    content: Text('You stopped at ${formatDurationMs(at.inMilliseconds)}.'),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context, false),
+        child: const Text('Start over'),
+      ),
+      FilledButton(
+        autofocus: true,
+        onPressed: () => Navigator.pop(context, true),
+        child: const Text('Resume'),
+      ),
+    ],
+  ),
+);
 
 String formatDurationMs(int ms) {
   final d = Duration(milliseconds: ms);

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'theme.dart';
 import '../data/database.dart';
+import '../settings/settings_controller.dart';
 import '../metadata/metadata_service.dart';
 import '../watch/watch_logic.dart';
 import 'play.dart';
@@ -45,8 +46,11 @@ class _ShowPageState extends State<ShowPage> {
 
   // Created once; creating streams inside build resubscribes on every setState.
   late final Stream<Show> _showStream = db.watchShow(widget.showId);
+  // Read once at first build: the settings screen is not reachable from here,
+  // so 'Show missing files' cannot change while this page is open.
   late final Stream<List<Episode>> _episodesStream = db.watchEpisodesOfShow(
     widget.showId,
+    includeMissing: SettingsScope.of(context).showMissing,
   );
 
   void _play(Show show, Episode e, {bool fromStart = false}) =>
@@ -380,7 +384,11 @@ class _ShowPageState extends State<ShowPage> {
               body: StreamBuilder<List<Episode>>(
                 stream: _episodesStream,
                 builder: (context, snap) {
-                  final eps = snap.data ?? const <Episode>[];
+                  final settings = SettingsScope.of(context);
+                  final eps = [
+                    for (final e in snap.data ?? const <Episode>[])
+                      if (settings.showSpecials || (e.season ?? 0) != 0) e,
+                  ];
                   final seasons = ({for (final e in eps) e.season ?? 0}.toList()
                     ..sort());
                   final season = seasons.isEmpty
@@ -398,7 +406,10 @@ class _ShowPageState extends State<ShowPage> {
                         e,
                   ];
                   _shown = shown;
-                  final target = continueTarget(eps.map(episodeRef));
+                  final target = continueTarget(
+                    eps.where((e) => !e.missing).map(episodeRef),
+                    threshold: settings.watchedFraction,
+                  );
                   final targetEp = target == null
                       ? null
                       : eps.firstWhere((e) => e.id == target.episode.id);
@@ -587,6 +598,16 @@ class _ShowPageState extends State<ShowPage> {
                           selecting: _selecting,
                           selected: _selected.contains(e.id),
                           onTap: () {
+                            if (e.missing && !_selecting) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'This file is missing. Rescan from the Library menu once it is back.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             if (_selecting ||
                                 HardwareKeyboard.instance.isControlPressed ||
                                 HardwareKeyboard.instance.isShiftPressed) {

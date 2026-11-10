@@ -75,7 +75,10 @@ class TmdbClient {
     : _http = client ?? http.Client();
 
   final String token;
-  final String language;
+
+  /// Metadata language; can be changed at runtime from settings (applies to
+  /// requests made afterwards).
+  String language;
   final http.Client _http;
 
   static const _host = 'api.themoviedb.org';

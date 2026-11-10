@@ -110,10 +110,14 @@ Stories:
 - Undo (snackbar) for bulk watched changes, mark-previous-watched, clear metadata, move to Unsorted.
 - 'Mark all previous episodes watched' per episode. 'Move to Unsorted' (undo a wrong assignment). 'Hide watched' filter on the show page.
 
-**9b — Settings & player options**
-- Settings screen (persisted in DB): autoplay on/off, lead time and countdown length; skip step (±N s); control-bar hide delay; watched threshold; resume behaviour (always / ask / restart); default volume mode; metadata language (overrides .env); home sort (A–Z, recently added, recently watched); poster size; show/hide specials; show missing files; reset all settings.
+**9b — Settings & player options** *(split in two by the product owner: 9b-1 settings screen, 9b-2 player options and data)*
+
+**9b-1 — Settings screen — DONE** (see CHANGELOG, DECISIONS D9-D19). Reachable from Home > Library menu > Settings.
+- Settings screen (persisted in DB, DONE in 9b-1): autoplay on/off, lead time and countdown length; skip step (±N s); control-bar hide delay; watched threshold; resume behaviour (always / ask / restart); default volume mode; metadata language (overrides .env); home sort (A–Z, recently added, recently watched); poster size; show/hide specials; show missing files; reset all settings.
+
+**9b-2 — Player options and data** *(next)*
 - Player: playback speed ([ ] keys), subtitle delay (Z/X), audio delay, aspect ratio, hardware-decoding toggle, keyboard-shortcut help (?) (DONE in the settings panel).
-- Data: export/import watch progress and settings (JSON backup), open data folder, About/version.
+- Data (9b-2): export/import watch progress and settings (JSON backup), open data folder, About/version.
 
 **9c — Robustness & packaging**
 - Error states: missing/moved file (offer rescan), unreachable folder, no network/token; loading placeholders.
@@ -134,7 +138,7 @@ Visual and interaction redesign of the whole app once the feature set is complet
 - **KB-1 Picture-based embedded subtitles do not display** (e.g. Rick and Morty S01, Blu-ray `hdmv_pgs_subtitle`, track 'English (SDH)'; they work in VLC; text subtitles such as Community work). Parked by product owner; rework later.
   - Findings: the track is listed and shows ticked in the menu, but mpv itself reports `sid=no` (track not actually selected), also when `sid` is set to 1 directly through the libmpv property; `sub-visibility=yes`, libass on. So rendering is not the problem; mpv is not selecting/opening the PGS stream (possible causes: PGS decoder missing from the bundled libmpv build, or the media_kit track id vs mpv id mismatch). Tried: libass on, runtime `sub-visibility` toggle, `sub-pos` nudge.
   - Next steps: check mpv log output (`Player(configuration: PlayerConfiguration(logLevel: ...))`, `player.stream.log`) while selecting the track; compare with the `mpv.exe` build; try a newer libmpv build; as a fallback, offer OCR-free alternative such as 'Load subtitle file' or extracting to SRT outside the app (media files must never be modified).
-- **KB-2 Four startup `Failed to update ui::AXTree, error: 0 will not be in the tree` log lines** (Flutter Windows accessibility bridge, root node 0). Harmless, no functional effect, left as is. The flood of hundreds of these when the player opened was fixed by excluding the player body from semantics (see CHANGELOG). Check later: does the plain home screen alone print the same 4 lines (then it is an engine quirk), and does a newer Flutter stable still do it.
+- **KB-2 A few `Failed to update ui::AXTree` log lines** (one also seen on the settings screen, so it is not player-specific). Original note: four startup `Failed to update ui::AXTree, error: 0 will not be in the tree` log lines** (Flutter Windows accessibility bridge, root node 0). Harmless, no functional effect, left as is. The flood of hundreds of these when the player opened was fixed by excluding the player body from semantics (see CHANGELOG). Check later: does the plain home screen alone print the same 4 lines (then it is an engine quirk), and does a newer Flutter stable still do it.
 
 ## Backlog / maybe
 - Hardware-decoding toggle, playback speed, thumbnails on seek bar, file watcher for auto-rescan, installer.

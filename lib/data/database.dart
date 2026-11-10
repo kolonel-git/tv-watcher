@@ -177,24 +177,42 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<ShowWithCount>> watchShows() {
     final count = episodes.id.count();
+    final added = episodes.addedAt.min();
+    final played = episodes.lastPlayedAt.max();
     final q =
         select(shows)
             .join([innerJoin(episodes, episodes.showId.equalsExp(shows.id))])
           ..where(episodes.missing.equals(false))
-          ..addColumns([count])
+          ..addColumns([count, added, played])
           ..groupBy([shows.id])
           ..orderBy([OrderingTerm.asc(shows.name)]);
     return q.watch().map(
       (rows) => [
         for (final r in rows)
-          ShowWithCount(r.readTable(shows), r.read(count) ?? 0),
+          ShowWithCount(
+            r.readTable(shows),
+            r.read(count) ?? 0,
+            addedAt: r.read(added),
+            lastPlayedAt: r.read(played),
+          ),
       ],
     );
   }
 
-  Stream<List<Episode>> watchEpisodesOfShow(int showId) =>
+  /// Episodes of a show in order. Files that went missing are left out
+  /// unless [includeMissing] (the 'Show missing files' setting).
+  Stream<List<Episode>> watchEpisodesOfShow(
+    int showId, {
+    bool includeMissing = false,
+  }) =>
       (select(episodes)
-            ..where((e) => e.showId.equals(showId) & e.missing.equals(false))
+            ..where(
+              (e) =>
+                  e.showId.equals(showId) &
+                  (includeMissing
+                      ? const Constant(true)
+                      : e.missing.equals(false)),
+            )
             ..orderBy([
               (e) => OrderingTerm.asc(e.season),
               (e) => OrderingTerm.asc(e.episode),
@@ -243,6 +261,7 @@ class AppDatabase extends _$AppDatabase {
       positionMs: positionMs,
       durationMs: durationMs,
       wasWatched: ep.watched,
+      threshold: watchedFraction,
     );
     final becameWatched = u.watched && !ep.watched;
     final meaningful = u.positionMs > 0 || becameWatched;
@@ -300,7 +319,10 @@ class AppDatabase extends _$AppDatabase {
       }
       final items = <ContinueItem>[];
       for (final entry in byShow.entries) {
-        final target = continueTarget(entry.value.map(episodeRef));
+        final target = continueTarget(
+          entry.value.map(episodeRef),
+          threshold: watchedFraction,
+        );
         if (target == null) continue;
         final ep = entry.value.firstWhere((e) => e.id == target.episode.id);
         final show = await (select(
@@ -421,6 +443,21 @@ class AppDatabase extends _$AppDatabase {
   )..where((e) => e.showId.equals(showId) & e.missing.equals(false))).get();
 
   // ---- settings ----
+
+  /// Share of an episode that counts as watched. Set from the user's
+  /// settings; progress saving and Continue Watching read it.
+  double watchedFraction = watchedThreshold;
+
+  /// All stored settings whose key starts with [prefix], keyed without it.
+  Future<Map<String, String>> settingsWithPrefix(String prefix) async {
+    final rows = await (select(
+      appSettings,
+    )..where((t) => t.key.like('$prefix%'))).get();
+    return {for (final r in rows) r.key.substring(prefix.length): r.value};
+  }
+
+  Future<void> deleteSettingsWithPrefix(String prefix) =>
+      (delete(appSettings)..where((t) => t.key.like('$prefix%'))).go();
 
   Future<String?> getSetting(String key) async => (await (select(
     appSettings,
@@ -546,9 +583,20 @@ class AppDatabase extends _$AppDatabase {
 }
 
 class ShowWithCount {
-  ShowWithCount(this.show, this.episodeCount);
+  ShowWithCount(
+    this.show,
+    this.episodeCount, {
+    this.addedAt,
+    this.lastPlayedAt,
+  });
   final Show show;
   final int episodeCount;
+
+  /// When the show's first episode was added; for the 'Recently added' sort.
+  final DateTime? addedAt;
+
+  /// Latest play of any episode; for the 'Recently watched' sort.
+  final DateTime? lastPlayedAt;
 }
 
 class ContinueItem {

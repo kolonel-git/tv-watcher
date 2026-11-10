@@ -7,6 +7,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../data/database.dart';
+import '../settings/settings_controller.dart';
+import '../settings/user_settings.dart';
 import '../tracks/external_subs.dart';
 import '../tracks/track_prefs.dart';
 import '../ui/play.dart';
@@ -35,7 +37,7 @@ class PlayerPage extends StatefulWidget {
     this.db,
     this.episodeId,
     this.startAt,
-    this.config = PlayerConfig.defaults,
+    this.config,
   });
 
   /// File to start playing immediately (from the library).
@@ -49,15 +51,20 @@ class PlayerPage extends StatefulWidget {
   /// Resume point. Null or zero = start from the beginning.
   final Duration? startAt;
 
-  /// Tunable numbers (steps, delays, subtitle spacing).
-  final PlayerConfig config;
+  /// Tunable numbers; null = derived from the user's settings.
+  final PlayerConfig? config;
 
   @override
   State<PlayerPage> createState() => _PlayerPageState();
 }
 
 class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
-  PlayerConfig get _cfg => widget.config;
+  /// Settings as they were when the player opened (the settings screen is not
+  /// reachable from here, so they cannot change mid-playback).
+  late final UserSettings _settings =
+      SettingsScope.controllerOf(context)?.value ?? UserSettings.defaults;
+  late final PlayerConfig _cfg =
+      widget.config ?? PlayerConfig.fromSettings(_settings);
 
   // libass on: mpv can draw picture subtitles (PGS, VobSub) itself. For text
   // tracks we switch mpv's drawing off and draw them ourselves (movable).
@@ -94,7 +101,10 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
   Show? _show;
   List<Episode> _siblings = const [];
   Episode? _next;
-  final AutoplayState _autoplay = AutoplayState();
+  late final AutoplayState _autoplay = AutoplayState(
+    leadMs: _settings.autoplayLeadSeconds * 1000,
+    countdownSeconds: _settings.autoplayCountdownSeconds,
+  );
   bool _advancing = false;
 
   // --- audio / subtitle choice (remembered per show) ---
@@ -166,7 +176,10 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     final style = SubtitleStyle.decode(await db.getSetting(settingSubStyle));
     if (!mounted) return;
     _subStyle = style;
-    if (vol != null) _player.setVolume(vol.clamp(0, 100));
+    final startVolume = _settings.volumeMode == VolumeMode.fixed
+        ? _settings.fixedVolume.toDouble()
+        : vol;
+    if (startVolume != null) _player.setVolume(startVolume.clamp(0, 100));
     await _placement.load(db);
   }
 
@@ -448,7 +461,9 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
   void _onPosition(Duration p) {
     final durMs = _player.state.duration.inMilliseconds;
     if (_gate.onPosition(p, _player.state.duration)) _maybeApplyTracks();
-    if (!_tracking || !_gate.trusted || _advancing) return;
+    if (!_tracking || !_gate.trusted || _advancing || !_settings.autoplay) {
+      return;
+    }
     final changed = _autoplay.onPosition(
       positionMs: p.inMilliseconds,
       durationMs: durMs,
@@ -486,6 +501,7 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     if (!done) return;
     _saveProgress(atEnd: true);
     if (_tracking &&
+        _settings.autoplay &&
         _next != null &&
         !_autoplay.cancelled &&
         !_advancing &&
@@ -507,7 +523,14 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     await db.setWatched([current], true);
     if (!mounted) return;
 
-    final resumeMs = resumePositionMs(next.positionMs, next.durationMs);
+    // Hands-free advance never asks; 'ask' behaves like 'always' here.
+    final resumeMs = _settings.resume == ResumeBehavior.restart
+        ? 0
+        : resumePositionMs(
+            next.positionMs,
+            next.durationMs,
+            threshold: _settings.watchedFraction,
+          );
     _episodeId = next.id;
     _autoplay.reset();
     setState(() {

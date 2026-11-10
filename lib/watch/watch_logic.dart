@@ -1,6 +1,8 @@
 // Pure watch-state logic: progress thresholds, resume position, and the
 // "what do I watch next" rules. No I/O, no database types.
 
+/// Default share of an episode that counts as watched; the user can change
+/// it in settings (the functions below take a `threshold`).
 const double watchedThreshold = 0.90;
 
 /// Positions earlier than this are not worth resuming from.
@@ -55,11 +57,12 @@ ProgressUpdate computeProgress({
   required int positionMs,
   required int durationMs,
   required bool wasWatched,
+  double threshold = watchedThreshold,
 }) {
   if (durationMs <= 0) {
     return ProgressUpdate(positionMs: 0, watched: wasWatched);
   }
-  if (positionMs / durationMs >= watchedThreshold) {
+  if (positionMs / durationMs >= threshold) {
     return const ProgressUpdate(positionMs: 0, watched: true);
   }
   if (positionMs < minResumeMs) {
@@ -69,9 +72,13 @@ ProgressUpdate computeProgress({
 }
 
 /// Position to start playback from for a stored value.
-int resumePositionMs(int positionMs, int durationMs) {
+int resumePositionMs(
+  int positionMs,
+  int durationMs, {
+  double threshold = watchedThreshold,
+}) {
   if (positionMs < minResumeMs) return 0;
-  if (durationMs > 0 && positionMs / durationMs >= watchedThreshold) return 0;
+  if (durationMs > 0 && positionMs / durationMs >= threshold) return 0;
   return positionMs;
 }
 
@@ -112,7 +119,10 @@ class ContinueTarget {
 /// 1. An episode with a saved position wins (most recently played).
 /// 2. Otherwise the first unwatched regular episode after the most recently
 ///    watched one (rolling over into the next season).
-ContinueTarget? continueTarget(Iterable<EpRef> episodes) {
+ContinueTarget? continueTarget(
+  Iterable<EpRef> episodes, {
+  double threshold = watchedThreshold,
+}) {
   final all = episodes.toList();
   final epoch = DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -126,7 +136,7 @@ ContinueTarget? continueTarget(Iterable<EpRef> episodes) {
     final e = inProgress.last;
     return ContinueTarget(
       e,
-      resumePositionMs(e.positionMs, e.durationMs),
+      resumePositionMs(e.positionMs, e.durationMs, threshold: threshold),
       e.lastPlayedAt ?? epoch,
     );
   }

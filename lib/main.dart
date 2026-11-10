@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'config/env_config.dart';
 import 'data/database.dart';
+import 'settings/settings_controller.dart';
 import 'ui/home_page.dart';
 import 'metadata/metadata_service.dart';
 import 'metadata/tmdb_client.dart';
@@ -29,21 +30,35 @@ Future<void> main() async {
       artworkDir: Directory(p.join(support.path, 'artwork')),
     );
   }
-  runApp(TvWatcherApp(db: db, meta: meta));
+  final settings = await SettingsController.load(
+    db,
+    meta: meta,
+    envLanguage: env.language,
+  );
+  runApp(TvWatcherApp(db: db, meta: meta, settings: settings));
 }
 
 class TvWatcherApp extends StatelessWidget {
-  const TvWatcherApp({super.key, required this.db, this.meta});
+  const TvWatcherApp({
+    super.key,
+    required this.db,
+    this.meta,
+    required this.settings,
+  });
   final AppDatabase db;
   final MetadataService? meta;
+  final SettingsController settings;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TV Watcher',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      home: HomePage(db: db, meta: meta),
+    return SettingsScope(
+      controller: settings,
+      child: MaterialApp(
+        title: 'TV Watcher',
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(),
+        home: HomePage(db: db, meta: meta),
+      ),
     );
   }
 }

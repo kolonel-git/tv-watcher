@@ -53,12 +53,18 @@ Output: `build\windows\x64\runner\Release\` (copy the whole folder; it is portab
 | B | Cycle audio tracks |
 | ? | Shortcut list (settings panel) |
 
+Settings (autoplay, skip step, watched threshold, resume behaviour, volume, language, sort, poster size, specials, missing files): Home > Library menu > Settings. Decisions are recorded in [DECISIONS.md](DECISIONS.md).
+
 Subtitles: drag them to move, double-click to reset. They sit above the control bar while it is visible. Subtitle look: settings panel > Subtitles > Subtitle settings. Volume is remembered.
 
 ## Config
 
 TMDB Read Access Token: copy `.env.example` to `.env` and set `TMDB_READ_TOKEN` (and optionally `TMDB_LANGUAGE`, default `en-US`). `.env` is gitignored.
 
-## Code layout (player)
+## Code layout
+
+`lib/settings/`: `user_settings.dart` (the model and its ranges), `settings_controller.dart` (storage and `SettingsScope`). `lib/ui/settings_page.dart` and `settings_widgets.dart` draw the screen.
+
+### Player
 
 `lib/player/`: `player_page.dart` wires the parts together; `player_config.dart` (tunables), `player_shortcuts.dart` (keys), `subtitle_placement.dart` (subtitle drag/lift/save), `progress_gate.dart` (trust of reported position), `track_catalog.dart` (audio/subtitle tracks), `mpv_properties.dart` (libmpv), `control_bar.dart`, `next_episode_card.dart`, `player_panel.dart`, `subtitle_overlay.dart`.
