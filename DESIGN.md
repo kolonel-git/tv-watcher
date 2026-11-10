@@ -15,7 +15,8 @@ Tokens live in [lib/ui/theme.dart](lib/ui/theme.dart) (`Ui`, `buildTheme()`); us
 
 ## Components
 - Menus, dialogs, snackbars and tooltips are themed globally; menus open **under** their button.
-- Player: one settings panel docked above the control bar (Subtitles, Audio, Subtitle appearance, Shortcuts) instead of popup menus and dialogs. Opens with the CC, audio or tune button, `?` for shortcuts, Esc closes.
+- Player: one settings panel docked above the control bar (root: Subtitles, Audio, Shortcuts; 'Subtitle settings' lives only inside the Subtitles page) instead of popup menus and dialogs. Opens with the CC, audio or tune button, `?` for shortcuts, Esc closes.
+- Subtitles: a text overlay (`SubtitleLayer`) above the control bar; drag anywhere (x and y), double-click resets, position saved. Flutter rule: `Positioned` must be a direct Stack child, never under a builder.
 - Controls: icon size 24 (play 32), always with a tooltip; the control bar auto-hides after 3 s.
 - Show page: season chips (up to 6 seasons, dropdown beyond), visible Select button, inline watched toggle on each episode, grouped overflow menu.
 - Home: wordmark, search, sort, unsorted shortcut (when files wait), Library menu.

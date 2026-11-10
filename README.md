@@ -21,6 +21,8 @@ flutter pub get
 flutter run -d windows
 ```
 
+Or double-click `run_tv_watcher.cmd` (a Desktop shortcut to it works): it always builds the latest source first. In its window: `r` hot reload, `R` hot restart, `q` quit. Close a running copy first. Full rerun only for pubspec, native or DB schema changes.
+
 ## Test
 
 ```
@@ -44,14 +46,19 @@ Output: `build\windows\x64\runner\Release\` (copy the whole folder; it is portab
 | ↑ / ↓ | Volume +5 / -5 |
 | M | Mute |
 | F / double-click | Fullscreen |
-| Esc | Exit fullscreen |
+| Esc | Close panel, exit fullscreen, go back |
 | O | Open file |
 | N | Next episode (library playback) |
 | V | Cycle subtitles (off, then each track) |
 | B | Cycle audio tracks |
+| ? | Shortcut list (settings panel) |
 
-Subtitles: drag them to move, double-click to reset. They sit above the control bar while it is visible. Subtitle look: subtitle menu > Subtitle settings. Volume is remembered.
+Subtitles: drag them to move, double-click to reset. They sit above the control bar while it is visible. Subtitle look: settings panel > Subtitles > Subtitle settings. Volume is remembered.
 
 ## Config
 
 TMDB Read Access Token: copy `.env.example` to `.env` and set `TMDB_READ_TOKEN` (and optionally `TMDB_LANGUAGE`, default `en-US`). `.env` is gitignored.
+
+## Code layout (player)
+
+`lib/player/`: `player_page.dart` wires the parts together; `player_config.dart` (tunables), `player_shortcuts.dart` (keys), `subtitle_placement.dart` (subtitle drag/lift/save), `progress_gate.dart` (trust of reported position), `track_catalog.dart` (audio/subtitle tracks), `mpv_properties.dart` (libmpv), `control_bar.dart`, `next_episode_card.dart`, `player_panel.dart`, `subtitle_overlay.dart`.

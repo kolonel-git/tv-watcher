@@ -29,6 +29,10 @@ class Ui {
   static const rSm = 6.0;
   static const rMd = 10.0;
   static const rLg = 14.0;
+
+  /// How long an undo snackbar stays up.
+  static const undoDuration = Duration(seconds: 8);
+
   static const s1 = 4.0, s2 = 8.0, s3 = 12.0, s4 = 16.0, s5 = 24.0, s6 = 32.0;
 
   /// Scrim behind text that sits on artwork or video.
