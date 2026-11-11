@@ -15,6 +15,13 @@ if not defined FLUTTER (
   goto done
 )
 
+rem Fetch any new or changed packages first (quick when nothing changed).
+call "%FLUTTER%" pub get
+if errorlevel 1 (
+  echo.
+  echo pub get failed: check your internet connection, then try again.
+  goto done
+)
 call "%FLUTTER%" run -d windows
 
 :done
