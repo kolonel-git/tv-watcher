@@ -330,7 +330,17 @@ class _ShowPageState extends State<ShowPage> {
       stream: _showStream,
       builder: (context, showSnap) {
         final show = showSnap.data;
-        if (show == null) return const Scaffold();
+        if (show == null) {
+          return const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
         return CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.escape): () {

@@ -283,7 +283,15 @@ class _HomePageState extends State<HomePage> {
               stream: _shows,
               builder: (context, snap) {
                 final shows = snap.data;
-                if (shows == null) return const SizedBox.shrink();
+                if (shows == null) {
+                  return const Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                }
                 if (shows.isEmpty) return _Empty(onAdd: _addFolder);
                 final visible = filterAndSortShows(shows, _query, sort);
                 if (visible.isEmpty) {

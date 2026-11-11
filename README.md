@@ -21,7 +21,7 @@ flutter pub get
 flutter run -d windows
 ```
 
-Or double-click `run_tv_watcher.cmd` (a Desktop shortcut to it works): it always builds the latest source first. In its window: `r` hot reload, `R` hot restart, `q` quit. Close a running copy first. Full rerun only for pubspec, native or DB schema changes.
+Or double-click `run_tv_watcher.cmd` (a Desktop shortcut to it works): it runs `flutter pub get` (fetches new packages) and then builds the latest source. In its window: `r` hot reload, `R` hot restart, `q` quit. Close a running copy first. Full rerun only for pubspec, native or DB schema changes.
 
 ## Test
 
@@ -32,10 +32,12 @@ flutter test
 ## Package
 
 ```
-flutter build windows --release
+powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
 ```
 
-Output: `build\windows\x64\runner\Release\` (copy the whole folder; it is portable).
+Builds the release and writes `dist\tv-watcher-<version>-windows.zip`: portable, contains `INSTALL.txt`, never contains `.env` (the TMDB token) or the database. Unzip anywhere and run `tv_watcher.exe`; put your own `.env` next to it for posters. The bare build (`flutter build windows --release`) outputs `build\windows\x64\runner\Release\`.
+
+The window remembers its position and size. If a file is moved or an external drive is unplugged, the app says so when you press play (and offers a rescan).
 
 ## Player shortcuts
 

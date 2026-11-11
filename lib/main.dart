@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'ui/image_budget.dart';
 import 'ui/theme.dart';
+import 'window/window_memory.dart';
 
 import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
@@ -18,7 +20,9 @@ import 'dart:io';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  ImageBudget.apply();
   final db = AppDatabase();
+  await WindowMemory.start(db);
   final env = await EnvConfig.load();
   MetadataService? meta;
   final token = env.tmdbToken;

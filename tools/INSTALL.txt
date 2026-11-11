@@ -1,0 +1,31 @@
+TV Watcher - portable install
+
+1. Unzip this folder anywhere (for example C:\Apps\TV Watcher). Keep all the
+   files together: tv_watcher.exe needs the DLLs and the data folder next to it.
+2. Run tv_watcher.exe. A shortcut to it on the desktop works fine.
+3. In the app: Library menu > Add folder, and pick the folder with your shows.
+   Your media files are only read, never changed, renamed or moved.
+
+Posters and descriptions (optional)
+- They come from TMDB. Create a free TMDB account, copy your "API Read Access
+  Token", and put it in a text file named .env next to tv_watcher.exe:
+
+      TMDB_READ_TOKEN=your token here
+
+  Optional second line: TMDB_LANGUAGE=en-US
+- Without the token the app still works; shows just have no artwork.
+- Keep the token private. Do not share the .env file.
+
+Where your data lives
+- Library, progress and settings: tv_watcher.sqlite in your Documents folder
+  (Settings > Data > Open data folder).
+- Downloaded artwork: the app's support folder under your user profile.
+- Back up progress and settings any time: Settings > Data > Export.
+
+Privacy
+- No accounts, no telemetry. The only network calls go to TMDB for show
+  information and artwork.
+
+Uninstall
+- Delete the unzipped folder. Optionally delete tv_watcher.sqlite from
+  Documents.

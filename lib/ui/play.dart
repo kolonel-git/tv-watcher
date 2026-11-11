@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/database.dart';
+import '../library/file_check.dart';
+import '../library/scanner.dart';
 import '../player/player_page.dart';
 import '../settings/settings_controller.dart';
 import '../settings/user_settings.dart';
@@ -14,8 +16,20 @@ Future<void> openEpisode(
   Show show,
   Episode e, {
   bool fromStart = false,
+  CheckPlayable check = checkPlayable,
 }) async {
   final settings = SettingsScope.of(context);
+  final folder = await db.folderById(e.folderId);
+  final problem = folder == null
+      ? FileProblem.fileMissing
+      : await check(e.filePath, folder.path);
+  if (problem != null) {
+    if (context.mounted) {
+      await showFileProblem(context, db, e, folder, problem);
+    }
+    return;
+  }
+  if (!context.mounted) return;
   var resumeMs = fromStart || settings.resume == ResumeBehavior.restart
       ? 0
       : resumePositionMs(
@@ -77,4 +91,56 @@ String formatDurationMs(int ms) {
 String episodeTitle(Show show, Episode e) {
   final name = e.tmdbTitle ?? e.title;
   return '${show.tmdbName ?? show.name}  S${e.season}E${e.episode}${name != null ? ' \u00b7 $name' : ''}';
+}
+
+/// Signature of [checkPlayable], injectable in tests.
+typedef CheckPlayable = Future<FileProblem?> Function(
+  String filePath,
+  String folderPath,
+);
+
+/// Tells the user why [e] cannot play and, when the folder is reachable,
+/// offers a rescan so the library catches up with moved or deleted files.
+Future<void> showFileProblem(
+  BuildContext context,
+  AppDatabase db,
+  Episode e,
+  LibraryFolder? folder,
+  FileProblem problem,
+) async {
+  final offline = problem == FileProblem.folderUnreachable;
+  final rescan = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(offline ? 'Folder not reachable' : 'File not found'),
+      content: Text(
+        offline
+            ? 'The library folder is not available:\n${folder?.path}\n\n'
+                  'Reconnect the drive or network share, then try again.'
+            : 'This file was moved, renamed or deleted:\n${e.filePath}\n\n'
+                  'Rescan to update the library.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Close'),
+        ),
+        if (!offline && folder != null)
+          FilledButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Rescan'),
+          ),
+      ],
+    ),
+  );
+  if (rescan != true || folder == null) return;
+  final r = await scanFolder(db, folder);
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Rescan done: ${r.added} new, ${r.missing} missing'),
+      ),
+    );
+  }
 }

@@ -159,6 +159,9 @@ class AppDatabase extends _$AppDatabase {
     mode: InsertMode.insertOrIgnore,
   );
 
+  Future<LibraryFolder?> folderById(int id) =>
+      (select(libraryFolders)..where((f) => f.id.equals(id))).getSingleOrNull();
+
   Future<void> removeFolder(int id) async {
     await (delete(episodes)..where((e) => e.folderId.equals(id))).go();
     await (delete(libraryFolders)..where((f) => f.id.equals(id))).go();

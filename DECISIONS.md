@@ -86,3 +86,21 @@ File save/open dialogs and Explorer are in `PlatformDataActions`; the settings s
 
 ## D28 libmpv property names verified live (9b-2)
 A throwaway entry point set each property on a real player and read it back: `speed` 1.5, `sub-delay` -0.3, `audio-delay` 0.2, `video-aspect-override` 16:9 -> 1.777778 and back to -1, `hwdec` no <-> auto-safe. The entry point was deleted afterwards.
+
+## D29 Unplayable files are explained before the player opens (9c)
+`openEpisode` first checks the file (`checkPlayable`, read-only). File gone but its library folder present: dialog 'File not found' with the path and a Rescan button (runs `scanFolder` for that folder, so moved files are found again and deleted ones marked missing). Whole folder unreachable (unplugged drive, offline share): dialog 'Folder not reachable', no Rescan (nothing to scan), tells the user to reconnect. Previously the player opened and showed nothing useful. Scan-time offline folders, no TMDB token and offline metadata were already handled (notes on the home page).
+
+## D30 Window size and position are remembered with window_manager 0.5.x (9c)
+`WindowMemory` restores the last frame at startup and saves (debounced 500 ms) after move, resize and maximize. Stored under settings key `window.frame`, deliberately outside the backup whitelist: geometry belongs to one computer. A stored frame is untrusted: `WindowFrame.decode` is tolerant and `fitTo` raises tiny sizes to 640x400, shrinks to the screen, and centers frames that are (nearly) off every screen, for example after unplugging a monitor. While maximized the last normal size is kept so un-maximizing is sensible. The player sets `WindowMemory.suspended` during fullscreen so that frame is never saved. Any failure is swallowed: remembering the window must never block startup. window_manager 0.6.0 was rejected: it is a rewrite on a new native base (nativeapi) with a different API; 0.5.x is the long-used line. screen_retriever (its dependency) is used directly to read the screens.
+
+## D31 Image cache has explicit limits (9c)
+`ImageBudget` sets 200 MB and 400 images (Flutter default 100 MB and 1000). A 400 px poster decodes to about 1 MB, so the default held about 100 posters and a large grid re-decoded while scrolling; the byte cap keeps memory bounded regardless of library size.
+
+## D32 Large-library performance was measured, not guessed (9c)
+`test/large_library_test.dart` builds 400 shows and 10,000 episodes in memory: the home shows list loads in about 70 ms and Continue Watching in about 190 ms. That is far inside budget, so no query was changed. `watchContinueWatching` still reads all episodes and looks up shows one by one (it re-runs on every progress save); the test is the tripwire if that ever grows (bounds 1.5 s and 2.5 s, deliberately loose against machine noise).
+
+## D33 Release is a portable zip built by a script (9c)
+`tools/package_windows.ps1` runs `flutter build windows --release`, copies the Release folder to `dist/`, deletes any `.env`, `*.sqlite`, `*.db` as a safety net, adds `tools/INSTALL.txt` and zips it. The TMDB token is never packaged; the install note tells the user to put their own `.env` next to the exe. No installer: a personal local app, and the zip is also the upgrade path (data lives outside the folder). `dist/` is gitignored.
+
+## D34 Loading placeholders (9c)
+Home and show page showed a blank screen until their first database emission. They now show a small spinner. The DB is local so this is a flicker fix, not a progress bar.

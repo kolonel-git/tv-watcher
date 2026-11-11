@@ -119,7 +119,7 @@ Stories:
 - Player: playback speed ([ ] keys), subtitle delay (Z/X), audio delay, aspect ratio, hardware-decoding toggle, keyboard-shortcut help (?) (DONE in the settings panel).
 - Data (9b-2): export/import watch progress and settings (JSON backup), open data folder, About/version.
 
-**9c — Robustness & packaging**
+**9c — Robustness & packaging — DONE** (see CHANGELOG, DECISIONS D29-D34; the release zip still needs a run on a clean PC)
 - Error states: missing/moved file (offer rescan), unreachable folder, no network/token; loading placeholders.
 - Window size/position memory; perf pass with a large library; image cache cap.
 - `flutter build windows --release` portable zip + install note; final docs.

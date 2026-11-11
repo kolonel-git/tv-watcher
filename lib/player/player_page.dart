@@ -27,6 +27,7 @@ import 'subtitle_overlay.dart';
 import 'subtitle_placement.dart';
 import 'subtitle_style.dart';
 import 'track_catalog.dart';
+import '../window/window_memory.dart';
 
 /// Player: controls, keyboard shortcuts, resume, progress saving and
 /// autoplay of the next episode.
@@ -583,7 +584,10 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     _placement.removeListener(_onPlacementChanged);
     _placement.dispose();
     _focus.dispose();
-    if (_fullscreen) defaultExitNativeFullscreen();
+    if (_fullscreen) {
+      defaultExitNativeFullscreen();
+      WindowMemory.suspended = false;
+    }
     _player.dispose();
     super.dispose();
   }
@@ -749,6 +753,8 @@ class _PlayerPageState extends State<PlayerPage> implements PlayerCommands {
     await (value
         ? defaultEnterNativeFullscreen()
         : defaultExitNativeFullscreen());
+    // The fullscreen frame must not become the remembered window size.
+    WindowMemory.suspended = value;
     setState(() => _fullscreen = value);
   }
 
